@@ -1,0 +1,18 @@
+div{
+	padding: 5px;
+}
+button{
+	color: white;
+	background-color: grey;
+	border: white 2px solid;
+}
+button:hover{
+	background-color: lightgrey;
+}
+button:active{
+	background-color: black;
+}
+input{
+	color: black;
+	background-color: lightGrey;
+}

@@ -1,0 +1,27 @@
+<html>
+<head>
+<title>
+WOD 0.1
+</title>
+<script src="socket.io/socket.io.js">
+</script>
+<meta charset="UTF-8">
+<link rel=stylesheet href="style.css">
+</head>
+<body style="margin: 0">
+	<canvas id=c width=800 height=600></canvas>
+	<div id=overlay style="width: 100%;height: 100%;position: fixed;top: 0;padding-left: 40%;padding-top: 20%;background-color: rgba(0,0,0,0.7)">
+		<input type=text placeholder="Username" id=username>
+		<button onclick="tryLogin();document.getElementById('noticeArea').innerText = 'Connecting'">Test</button><br>
+		<input type=password placeholder="Password" id=password hidden><br>
+		<h6 id=noticeArea style="font-size: 10px;color: white"></h6>
+	</div>
+	<script>var socket = io();</script><!-- bez adresu bo jest ten sam -->
+<!--div style='width: 640px; height: 480px; border: 1px black solid' id=ch>
+
+</div><br>
+<input type=text id=msg><button id=sendChat>Wyślij</button><br>
+<input type=text id=username><button id=userSet>Zmień nick</button><br-->
+<script src="main.js"></script>
+</body>
+</html>

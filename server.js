@@ -4,7 +4,7 @@ var app = express(); //buduje serwer http - nmp install --save express@4.15.2
 var http = require('http').Server(app);
 var io = require('socket.io')(http); //bilbio do socketa - nmp install --save socket.io
 var url = require('url');
-const PORT = 8080;
+const PORT = 443;
 
 app.use(express.static('htdocs'));
 

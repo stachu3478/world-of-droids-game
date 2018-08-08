@@ -1,6 +1,6 @@
 {
   "name": "wod-game",
-  "version": "0.2",
+  "version": "1.0.2",
   "description": "my second socket.io app ;-;",
   "dependencies": {
     "express": "^4.16.3",

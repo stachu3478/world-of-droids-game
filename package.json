@@ -3,10 +3,11 @@
   "version": "0.2",
   "description": "my second socket.io app ;-;",
   "dependencies": {
-    "express": "^4.15.2",
+    "express": "^4.16.3",
     "socket.io": "^2.1.1"
   },
   "engines": {
-    "node": "8.11.2"
+    "node": "8.11.2",
+    "npm": "6.3.0"
   }
 }

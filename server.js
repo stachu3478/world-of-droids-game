@@ -345,6 +345,11 @@ function save(){
 };
 
 function load(){
+	try{
+		fs.accessSync("data");
+	}catch(err){
+		fs.mkdirSync("data");
+	};
 	fs.access("data/accounts", fs.constants.F_OK, (err) => {
 		if(err){
 			fs.mkdirSync("data/accounts");

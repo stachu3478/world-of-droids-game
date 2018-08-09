@@ -112,6 +112,7 @@ function Droid(x,y,team){
 	this.team = team;
 	this.dmg = false;
 	this.id = droids.length;
+	this.type = 0;
 	//this.wcd = 0;//walking cooldown
 	m[x][y].u = this;
 };
@@ -131,7 +132,9 @@ function delDroid(d){
 		for(var i = 0;i < droids.length;i++){
 			var d2 = droids[i];
 			if(d2.id > d.id)d2.id--;
-			if(d2.target > d.id)d2.target--;
+			if(d2.target == d.id){
+				d2.target = false;
+			}else if(d2.target > d.id)d2.target--;
 			if(anihilated && (d2.team == t))anihilated = false;
 		};
 		m[d.x][d.y].u = null;
@@ -149,7 +152,7 @@ function attack(d1,d2){
 	if(d1.r == 0){
 		if(d2.hp <= 0){
 			delDroid(d2);
-			d1.target = null;
+			d1.target = false;
 			return false;
 		};
 		d1.r = 4;
@@ -157,7 +160,7 @@ function attack(d1,d2){
 		d2.dmg = true;
 		if(d2.hp <= 0){
 			delDroid(d2);
-			d1.target = null;
+			d1.target = false;
 			return true;
 		}else if(!d2.target && !d2.moving){
 			d2.target = d1.id;
@@ -381,7 +384,7 @@ function load(){
 						if(err)throw err;
 						teams = JSON.parse(data);
 						for(var i = 0;i < teams.length;i++){
-							teams.anihilated = true;
+							teams[i].anihilated = true;
 						};
 						for(var i = 0;i < droids.length;i++){
 							var d = droids[i];
@@ -390,9 +393,10 @@ function load(){
 								moving.push(d);
 							};
 							if(teams[d.team].anihilated)teams[d.team].anihilated = false;
+							if(d.type == undefined)d.type = 0;
 						};
+						console.log("Map loaded");
 					});
-					console.log("Map loaded");
 				});
 			};
 		});
@@ -495,8 +499,9 @@ function init(){
 				};
 				var newId = teams.length;
 				teams.push(new Team(newId,u));
-				this.emit("err",{msg: "Temporary account created"});
 				save();
+				this.emit("err",{msg: "Temporary account created"});
+				this.emit.broadcast("teams",prepareTeams());
 			};
 		});
 		//s.emit('map',chatBuffer); //wysyla iwenta

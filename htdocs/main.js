@@ -20,7 +20,10 @@ var pressed = {
 };
 document.body.onkeydown = function(evt){
 	pressed[evt.key] = true;
-	if(evt.key == " ")selected = [];
+	if(evt.key == " "){
+		selected = [];
+		evt.preventDefault();
+	};
 };
 document.body.onkeyup = function(evt){
 	pressed[evt.key] = false;
@@ -46,12 +49,12 @@ dImages.g.src = "tiles/d1g.png";
 dImages.g.onload = incl;
 dImages.b.src = "tiles/d1b.png";
 dImages.b.onload = incl;
-function dDroid(x,y,r,g,b,a){
-	ctx.globalAlpha = a * r / 255;
+function dDroid(x,y,t,a){
+	ctx.globalAlpha = a * t.r / t.cs;
 	ctx.drawImage(dImages.r,x,y);
-	ctx.globalAlpha = a * g / 255;
+	ctx.globalAlpha = a * t.g / t.cs;
 	ctx.drawImage(dImages.g,x,y);
-	ctx.globalAlpha = a * b / 255;
+	ctx.globalAlpha = a * t.b / t.cs;
 	ctx.drawImage(dImages.b,x,y);
 	ctx.globalAlpha = 1;
 };
@@ -78,7 +81,7 @@ var tick = function(){
 	var ref = false;
 	for(var i = 0;i < moving.length;i++){
 		var d = moving[i];
-		if(d !== undefined){
+		if(d){
 			var p = d.path;
 			if(p.length == 0){
 				delete moving[i];
@@ -272,7 +275,9 @@ function delDroid(d){
 		for(var i = 0;i < droids.length;i++){
 			var d2 = droids[i];
 			if(d2.id > d.id)d2.id--;
-			if(d2.target > d.id)d2.target--;
+			if(d2.target == d.id){
+				d2.target = false;
+			}else if(d2.target > d.id)d2.target--;
 		};
 		m[d.x][d.y].u = null;
 		droids[d.id] = null;
@@ -404,11 +409,15 @@ function render(map,x,y){
 				};
 			};
 			//ctx.fillRect(px + offsetX,py + offsetY,tileSize,tileSize);
-			dDroid(px + offsetX,py + offsetY,t.r,t.g,t.b,u.dmg ? 0.5 : 1);
-			if(oSelected[u.id])hpBar(u.hp * 2,px + offsetX,py + offsetY);
+			dDroid(px + offsetX,py + offsetY,t,u.dmg ? 0.5 : 1);
+			if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 		};
 	};
+	var txt = "";
+	var tex = Math.floor(mx / tileSize);
+	var tey = Math.floor(my / tileSize);
 	if(marking){
+		txt = "X: " + tmx + " - " + tex + ", Y: " + tmy + " - " + tey;
 		ctx.strokeStyle = "lime";
 		ctx.fillStyle = "rgba(0,128,0,0.2)";
 		var sx = Math.min(smx,mx) - scrollX;
@@ -417,7 +426,16 @@ function render(map,x,y){
 		var height = Math.abs(smy - my); 
 		ctx.fillRect(sx,sy,width,height);
 		ctx.strokeRect(sx,sy,width,height);
+	}else{
+		txt = "X: " + tex + ", Y: " + tey;
 	};
+	ctx.fillStyle = "black";
+	ctx.font = "COnsolas 12px";
+	var len = ctx.measureText(txt).width + 2;
+	ctx.textAlign = "right";
+	ctx.fillRect(CW - len,CH - 14,len,14);
+	ctx.fillStyle = "white";
+	ctx.fillText(txt,CW - 1,CH - 1);
 };
 function Droid(x,y,team){
 	this.x = x;
@@ -483,6 +501,7 @@ function red(str){
 };
 
 //io stuff
+var firstLogin = true;
 var ue = document.getElementById("username");
 var pe = document.getElementById("password");
 var out = document.getElementById('noticeArea');
@@ -507,45 +526,65 @@ socket.on("disconnect",function(evt){
 socket.on("map",function(evt){
 	m = evt.m;
 	teams = evt.t;
+	for(var i = 0;i < teams.length;i++){
+		teams[i].cs = teams[i].r + teams[i].g + teams[i].b;
+	};
 	myTeam = evt.i;
-	socket.on("d",function(evt){
-		for(var i = 0;i < droids.length;i++){
-			var d = droids[i];
-			m[d.x][d.y].u = null;
-		};
-		for(var i = 0;i < evt.r.length;i++){
-			var d = evt.r[i];
-			m[d.x][d.y].u = d;
-		};
-		droids = evt.r;
-		if(!scrolledToMyDroids)for(var i = 0;i < droids.length;i++){//scrolls to your army
-			var d = droids[i];
-			if(d.team == myTeam){
-				scrollX = (d.x * tileSize) - (CW / 2);
-				scrollY = (d.y * tileSize) - (CH / 2);
-				scrolledToMyDroids = true;
-				break;
+	if(firstLogin){
+		socket.on("d",function(evt){
+			for(var i = 0;i < droids.length;i++){
+				var d = droids[i];
+				m[d.x][d.y].u = null;
 			};
-		};
-		moving = evt.m;
-		if(Math.abs((Date.now() - iStart) % 500) > 50){ //sets tick time offset relative to server one
-			clearInterval(inter);
-			inter = setInterval(tick,500);
-			iStart = Date.now();
-			console.log("Equalizing server tick.");
-		};
-		var dl = evt.d;
-		for(var i = 0;i < dl.length;i++){
-			var id = dl[i];
-			for(var j = 0;j < selected.length;j++){
-				var d = selected[j];
-				if(d.id > id)d.id--;
-				if(d.id == id){
-					delete selected[j];
-				}else if(d.target >= id)d.target--;
+			for(var i = 0;i < evt.r.length;i++){
+				var d = evt.r[i];
+				m[d.x][d.y].u = d;
 			};
-		};
-	});
+			droids = evt.r;
+			if(!scrolledToMyDroids)for(var i = 0;i < droids.length;i++){//scrolls to your army
+				var d = droids[i];
+				if(d.team == myTeam){
+					scrollX = (d.x * tileSize) - (CW / 2);
+					scrollY = (d.y * tileSize) - (CH / 2);
+					scrolledToMyDroids = true;
+					break;
+				};
+			};
+			moving = evt.m;
+			if(Math.abs((Date.now() - iStart) % 500) > 50){ //sets tick time offset relative to server one
+				clearInterval(inter);
+				inter = setInterval(tick,500);
+				iStart = Date.now();
+				console.log("Equalizing server tick.");
+			};
+			var dl = evt.d;
+			var ref = false;
+			for(var i = 0;i < dl.length;i++){
+				var id = dl[i];
+				for(var j = 0;j < selected.length;j++){
+					var d = droids[selected[j]];
+					if(selected[j] !== undefined){
+						if(selected[j] > id){
+							selected[j]--;
+						}else if(selected[j] == id){
+							delete selected[j];
+							ref = true;
+						}else if(d && d.target >= id)d.target--;
+					}else{
+						ref = true;
+					};
+				};
+			};
+			if(ref)selected = selected.filter(function(a){return a});
+		});
+		socket.on("teams",function(evt){
+			teams = evt.t;
+			for(var i = 0;i < teams.length;i++){
+				teams[i].cs = teams[i].r + teams[i].g + teams[i].b;
+			};
+		})
+		firstLogin = false;
+	};
 	init();
 	menu.hidden = true;
 });
@@ -587,6 +626,12 @@ socket.on('buffer',function(evt){
 })*/
 
 function scrol(x,y){
+	if(scrollX % 4 !== 0){
+		scrollX = Math.ceil(scrollX / 4) * 4;
+	};
+	if(scrollY % 4 !== 0){
+		scrollY = Math.ceil(scrollY / 4) * 4;
+	};
 	scrollX += x;
 	scrollY += y;
 	mx += x;
@@ -597,10 +642,10 @@ var loopFunc = function(){
 	if(pressed.w){
 		if(scrollY > 0)scrol(0,-4);
 	}else if(pressed.s){
-		if(scrollY < mapSizePx + CH)scrol(0,4);
+		if(scrollY < mapSizePx - CH)scrol(0,4);
 	};
 	if(pressed.d){
-		if(scrollX < mapSizePx + CW)scrol(4,0);
+		if(scrollX < mapSizePx - CW)scrol(4,0);
 	}else if(pressed.a){
 		if(scrollX > 0)scrol(-4,0);
 	};
@@ -625,9 +670,8 @@ function init(){
 			var u = m[tmx][tmy].u;
 			if((u !== null) && (u.team == myTeam)){
 				if(!pressed.Control)clearSelect();
-				selected.push(u);
-				oSelected[u.id] = true;
-				u.selected = true;
+				selected.push(u.id);
+				//oSelected[u.id] = true;
 			}else{
 				//find path and :>>>
 				var arr = [];
@@ -638,7 +682,7 @@ function init(){
 				var dArrx = [0,1,0,-1];
 				var dArry = [-1,0,1,0];
 				for(var i = 0;i < selected.length;i++){
-					var d = selected[i];
+					var d = droids[selected[i]];
 					if(d && (d.team == myTeam)){
 						if(!d.moving){
 							moving.push(d);
@@ -673,8 +717,8 @@ function init(){
 				for(var j = sy;j <= ey;j++){
 					var u = m[i][j].u;
 					if(u !== null && u.team == myTeam){
-						selected.push(u);
-						oSelected[u.id] = true;
+						selected.push(u.id);
+						//oSelected[u.id] = true;
 					}
 				}
 			}

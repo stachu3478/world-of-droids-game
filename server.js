@@ -506,7 +506,7 @@ function init(){
 				teams.push(new Team(newId,u));
 				save();
 				this.emit("err",{msg: "Temporary account created"});
-				this.emit.broadcast("teams",prepareTeams());
+				this.broadcast.emit("teams",prepareTeams());
 			};
 		});
 		//s.emit('map',chatBuffer); //wysyla iwenta

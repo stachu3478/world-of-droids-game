@@ -29,6 +29,7 @@ document.body.onkeyup = function(evt){
 	pressed[evt.key] = false;
 };
 
+const droidTypes = 4;
 loading = 0;
 function incl(){
 	if(++loading == 7){
@@ -36,26 +37,39 @@ function incl(){
 	};
 };
 
-var imgArray = [];
-var dImages = {
+var dirwgtype = {
 	
+	"0,-1": 0,
+	"0,1": 2,
+	"1,0": 1,
+	"-1,0": 3,
+	"NaN,NaN": 0,
+};
+var imgArray = [];
+var dImages = [];
+for(var it = 1;it <= droidTypes;it++){
+	dImages.push({
 	r: new Image(),
 	g: new Image(),
 	b: new Image(),
+	});
+	var i = it - 1;
+	dImages[i].r.src = "tiles/d" + it + "r.png";
+	dImages[i].r.onload = incl;
+	dImages[i].g.src = "tiles/d" + it + "g.png";
+	dImages[i].g.onload = incl;
+	dImages[i].b.src = "tiles/d" + it + "b.png";
+	dImages[i].b.onload = incl;
 };
-dImages.r.src = "tiles/d1r.png";
-dImages.r.onload = incl;
-dImages.g.src = "tiles/d1g.png";
-dImages.g.onload = incl;
-dImages.b.src = "tiles/d1b.png";
-dImages.b.onload = incl;
-function dDroid(x,y,t,a){
+function dDroid(x,y,t,u){
+	var tp1 = u.dir || 0;
+	var a = u.dmg ? 0.5 : 1;
 	ctx.globalAlpha = a * t.r / t.cs;
-	ctx.drawImage(dImages.r,x,y);
+	ctx.drawImage(dImages[tp1].r,x,y);
 	ctx.globalAlpha = a * t.g / t.cs;
-	ctx.drawImage(dImages.g,x,y);
+	ctx.drawImage(dImages[tp1].g,x,y);
 	ctx.globalAlpha = a * t.b / t.cs;
-	ctx.drawImage(dImages.b,x,y);
+	ctx.drawImage(dImages[tp1].b,x,y);
 	ctx.globalAlpha = 1;
 };
 for(var i = 1;i < 5;i++){
@@ -93,6 +107,7 @@ var tick = function(){
 					attack(d,target);
 				}else{
 					m[d.x][d.y].u = null;
+					d.dir = dirwgtype[(p[0] - d.x) + "," + (p[1] - d.y)] || 3;
 					d.lastX = d.x;
 					d.lastY = d.y;
 					d.x = p[0];
@@ -364,37 +379,9 @@ function render(map,x,y){
 			};
 		};
 	};
-	/*for(var i = sX, px = -oX;i <= eX;i++, px += tileSize){ //second loop for units ;-;
-		for(var j = sY ,py = -oY;j <= eY;j++ ,py += tileSize){
-			var exists = (i >= 0) && (j >= 0) && (i < 100) && (j < 100);
-			if(exists){
-				var u = map[i][j].u;
-				if(u !== null){
-					//ctx.fillStyle = u.dmg ? teams[u.team].dcdec : teams[u.team].cdec;
-					u.dmg = false;
-					var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-					var offsetX = 0;
-					var offsetY = 0;
-					if(u.moving){
-						var stamp = 1 - (((now - iStart) % 500) / 500);
-						if(stamp < u.maxOffset){
-							offsetX += (u.lastX - u.x) * stamp * tileSize;
-							offsetY += (u.lastY - u.y) * stamp * tileSize;
-							u.maxOffset = stamp;
-						};
-					};
-					//ctx.fillRect(px + offsetX,py + offsetY,tileSize,tileSize);
-					dDroid(px + offsetX,py + offsetY,t.r,t.g,t.b,u.dmg ? 0.5 : 1);
-					if(oSelected[u.id])hpBar(u.hp * 2,px + offsetX,py + offsetY);
-				};
-			};
-		};
-	};*/
 	for(var i = 0;i < droids.length;i++){
 		var u = droids[i];
 		if(u !== null){
-			//ctx.fillStyle = u.dmg ? teams[u.team].dcdec : teams[u.team].cdec;
-			u.dmg = false;
 			var px = u.x * tileSize - scrollX;
 			var py = u.y * tileSize - scrollY;
 			var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
@@ -408,8 +395,9 @@ function render(map,x,y){
 					u.maxOffset = stamp;
 				};
 			};
-			//ctx.fillRect(px + offsetX,py + offsetY,tileSize,tileSize);
-			dDroid(px + offsetX,py + offsetY,t,u.dmg ? 0.5 : 1);
+			if(isNaN(u.dir))u.dir = dirwgtype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
+			dDroid(px + offsetX,py + offsetY,t,u);
+			u.dmg = false;
 			if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 		};
 	};
@@ -455,6 +443,7 @@ function Droid(x,y,team){
 	this.maxOffset = 0;
 	this.team = team;
 	this.dmg = false;
+	this.dir = 0,
 	//this.wcd = 0;//walking cooldown
 	m[x][y].u = this;
 };
@@ -535,6 +524,7 @@ socket.on("map",function(evt){
 			for(var i = 0;i < droids.length;i++){
 				var d = droids[i];
 				m[d.x][d.y].u = null;
+				d.dir = dirwgtype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
 			};
 			for(var i = 0;i < evt.r.length;i++){
 				var d = evt.r[i];

@@ -314,6 +314,8 @@ function prepareTeams(){
 var chatBuffer = []; //bufor czatu
 
 function newSave(){
+	console.log("Saving data skipped.");
+	return false;
 	console.log("Saving data...");
 	var strBin = "";
 	for(var i = 0;i < m.length;i++){

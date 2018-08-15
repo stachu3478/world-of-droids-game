@@ -4,6 +4,7 @@ var app = express(); //buduje serwer http - nmp install --save express@4.15.2
 var http = require('http').Server(app);
 var io = require('socket.io')(http); //bilbio do socketa - nmp install --save socket.io
 var url = require('url');
+var req = require('request');
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static('htdocs'));
@@ -179,6 +180,7 @@ function dist(x12,y12){
 	return Math.sqrt(x12 * x12 + y12 * y12);
 };
 function pathTo(x1,y1,x2,y2){
+	if(m[x2][y2].t == 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2)return [x2,y2];
 	var pm = new Array(100);
 	for(var i = 0;i < 100;i++){
 		pm[i] = new Int8Array(100);
@@ -304,12 +306,105 @@ function prepareTeams(){
 	var toSend = [];
 	for(var i = 0;i < teams.length;i++){
 		var t = teams[i];
-		toSend.push({id: t.id, r: t.r, g: t.g, b: t.b, cdec: t.cdec, dcdec: t.dcdec, logged: t.logged, anihilated: t.anihilated});
+		toSend.push({id: t.id, r: t.r, g: t.g, b: t.b, cdec: t.cdec, dcdec: t.dcdec, logged: t.logged, anihilated: t.anihilated, u: t.u});
 	};
 	return toSend;
 };
 
 var chatBuffer = []; //bufor czatu
+
+function newSave(){
+	console.log("Saving data...");
+	var strBin = "";
+	for(var i = 0;i < m.length;i++){
+		for(var j = 0;j < m[i].length;j++){
+			strBin += m[i][j].t ? "1" : "0";
+		};
+	};
+	var dataCompressed = "";
+	for(var i = 0;i < strBin.length;i+=5){
+		var bins = strBin.slice(i,i + 5);
+		dataCompressed += parseInt(bins,2).toString(32);
+	};
+	var tmp = [];
+	for(var i = 0;i < teams.length;i++){
+		var d = teams[i];
+		tmp.push(teams[i].s);
+		delete teams[i].s;
+	};
+	var data = {
+		map: dataCompressed,
+		droids: droids,
+		teams: teams,
+	};
+	req({
+	  uri: "http://luatomcutils.cba.pl/wod.php",
+	  method: "POST",
+	  form: {
+		data: JSON.stringify(data),
+		password: "01h0fiq0e8r9urjnvlmzmvpwoqr910",
+	  },
+	}, function(error, response, body) {
+		if(error){
+			console.log("Saving data failed. Next try in 60 seconds.");
+			setTimeout(function(){newSave()},60000);
+		}else{
+			if(body.indexOf("Data save complete") !== -1){
+				console.log("Data save is successful.");
+			}else{
+				console.log("Saving data failed. Server responded with status of: "+response.code);
+			};
+		};
+	});
+	for(var i = 0;i < teams.length;i++){
+		teams[i].s = tmp[i];
+	};
+};
+
+function newLoad(){
+	req({
+	  uri: "http://luatomcutils.cba.pl/data.txt",
+	  method: "GET",
+	  timeout: 15000,
+	}, function(error, response, body) {
+		if(error){
+			console.log("Loading data failed. Next try in 30 seconds.");
+			setTimeout(function(){newSave()},30000);
+		}else{
+			var data = JSON.parse(body);
+			map = new Map(100,100);
+			m = map.map;
+			var strBin = "";
+			var mapStr = data.map;
+			for(var i = 0;i < mapStr.length;i++){
+				strBin += parseInt(mapStr[i],32).toString(2);
+			};
+			var it = 0;
+			for(var i = 0;i < m.length;i++){
+				for(var j = 0;j < m[i].length;j++){
+					m[i][j].t = parseInt(strBin[it]);
+					it++;
+				};
+			};
+			moving = [];
+			droids = data.droids.filter(function(a){if(a.hp){return a}else{m[a.x][a.y].u = null}});
+			teams = data.teams;
+			for(var i = 0;i < teams.length;i++){
+				teams[i].anihilated = true;
+			};
+			for(var i = 0;i < droids.length;i++){
+				var d = droids[i];
+				m[d.x][d.y].u = d;
+				if(d.moving){
+					moving.push(d);
+				};
+				if(teams[d.team].anihilated)teams[d.team].anihilated = false;
+				if(d.type == undefined)d.type = 0;
+			};
+			console.log("Map loaded");
+		};
+	});
+};
 
 function save(){
 	for(var i = 0;i < m.length;i++){
@@ -411,7 +506,7 @@ function load(){
 var m = [];
 function init(){
 	
-	load();
+	newLoad();
 	io.on('connection',function(s){
 		s.on('login',function(msg){
 			if(this._id == -1 && typeof msg == "object"){
@@ -456,7 +551,7 @@ function init(){
 										//var evt = {user: this.username.toString()};
 										//io.emit('bye',evt);
 										//chatBuffer.push({m: 'bye', e: evt});
-										save();
+										newSave();
 									}else{
 										console.log("A user disconnected.  Reason: "+err);
 									};
@@ -477,6 +572,27 @@ function init(){
 											d.target = msg.i;
 										}else if(d){
 											console.log("Invalid team: found: ",d.team,", expected ",this._id);
+										};
+									};
+								});
+								
+								this.on('cmd',function(cmd){
+									if(this._id == 0){//verify op
+										switch(cmd){
+											case "remap":{
+												var map = new Map(100,100);
+												m = map.map;
+												for(var i = 0;i < teams.length;i++){
+													if(teams[i].logged){
+														teams[i].logged = false;
+													};
+												};
+												io.emit("err",{msg: "Kicked"});
+												newSave();
+											};break;
+											case "close":{
+												
+											};break;
 										};
 									};
 								});
@@ -504,7 +620,7 @@ function init(){
 				};
 				var newId = teams.length;
 				teams.push(new Team(newId,u));
-				save();
+				newSave();
 				this.emit("err",{msg: "Temporary account created"});
 				this.broadcast.emit("teams",prepareTeams());
 			};

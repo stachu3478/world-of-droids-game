@@ -8,6 +8,7 @@ window.onchange = function(){
 	can.height = window.innerHeight;
 	CW = can.width;
 	CH = can.height;
+	if(menuOn)render(m,scrollX,scrollY);
 };
 var ctx = can.getContext("2d");
 var tileSize = 32;
@@ -32,7 +33,7 @@ document.body.onkeyup = function(evt){
 const droidTypes = 4;
 loading = 0;
 function incl(){
-	if(++loading == 7){
+	if(++loading == 16){
 		preinit();
 	};
 };
@@ -91,6 +92,7 @@ var selected = [];
 var oSelected = {};
 var moving = [];
 var droids = [];
+var onDroid = false;
 var tick = function(){
 	var ref = false;
 	for(var i = 0;i < moving.length;i++){
@@ -136,6 +138,7 @@ var tick = function(){
 		can.height = window.innerHeight;
 		CW = can.width;
 		CH = can.height;
+		if(menuOn)render(m,scrollX,scrollY);
 	};
 };
 var inter = setInterval(tick,500);
@@ -160,6 +163,7 @@ function dist(x12,y12){
 };
 
 function pathTo(x1,y1,x2,y2){
+	if(m[x2][y2].t == 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2)return [x2,y2];
 	var pm = new Array(100);
 	for(var i = 0;i < 100;i++){
 		pm[i] = new Int8Array(100);
@@ -401,6 +405,67 @@ function render(map,x,y){
 			if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 		};
 	};
+	ctx.fillStyle = "grey";
+	ctx.strokeStyle = "lightGrey";
+	ctx.strokeRect(0,0,41,320);
+	ctx.fillRect(0,0,40,325);
+	if(droids[selected[0]] !== undefined){
+		var xp = 0;
+		var yp = 320;
+		var u = droids[selected[0]];
+		ctx.strokeRect(xp,yp,128,64);
+		ctx.fillRect(xp,yp,128,64);
+		ctx.fillStyle = "black";
+		ctx.fillRect(xp + 44,yp + 4,80,24);
+		ctx.fillStyle = "lime";
+		ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
+		ctx.textAlign = "center";
+		ctx.fillStyle = "white";
+		//ctx.font = "20px Arial";
+		ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
+		ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
+		ctx.textAlign = "left";
+		ctx.fillStyle = "black";
+		ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"),xp + 36,yp + 58);
+	}else{
+		ctx.strokeRect(0,324,40,1);
+	};
+	ctx.fillStyle = "grey";
+	ctx.strokeStyle = "lightGrey";
+	if(droids[onDroid] !== undefined){
+		var xp = CW - 128;
+		var yp = 0;
+		var u = droids[onDroid];
+		ctx.strokeRect(xp,yp,128,64);
+		ctx.fillRect(xp,yp,128,64);
+		ctx.fillStyle = "black";
+		ctx.fillRect(xp + 44,yp + 4,80,24);
+		ctx.fillStyle = "lime";
+		ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
+		ctx.textAlign = "center";
+		ctx.fillStyle = "white";
+		//ctx.font = "20px Arial";
+		ctx.strokeStyle = "black";
+		ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
+		ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
+		ctx.textAlign = "left";
+		ctx.fillStyle = "black";
+		ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"),xp + 36,yp + 46);
+		ctx.fillText(teams[u.team].u,xp + 36,yp + 60);
+		var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
+		dDroid(xp,yp,t,u);
+	};
+	ctx.fillStyle = "green";
+	for(var i = 0;i < selected.length;i++){
+		var u = droids[selected[i]];
+		if(u !== null && u !== undefined){
+			var ypos = 320 - i * 32;
+			var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
+			dDroid(0,ypos,t,u);
+			u.dmg = false;
+			ctx.fillRect(32, ypos + 32 - u.hp * 0.64,8,u.hp * 0.64);
+		};
+	};
 	var txt = "";
 	var tex = Math.floor(mx / tileSize);
 	var tey = Math.floor(my / tileSize);
@@ -418,7 +483,7 @@ function render(map,x,y){
 		txt = "X: " + tex + ", Y: " + tey;
 	};
 	ctx.fillStyle = "black";
-	ctx.font = "COnsolas 12px";
+	ctx.font = "12px Consolas";
 	var len = ctx.measureText(txt).width + 2;
 	ctx.textAlign = "right";
 	ctx.fillRect(CW - len,CH - 14,len,14);
@@ -505,7 +570,8 @@ socket.on("err",function(err){
 		case "Password needed": {pe.hidden = false;out.innerText = "Type password"};break;
 		case "Wrong password": {out.innerText = red("Wrong password or login.")};break;
 		case "Your army was destroyed!": {menu.hidden = false;deinit();out.innerText = "Your army has been destroyed!"};break;
-	}
+		case "Kicked": {menu.hidden = false;deinit();out.innerText = "You were kicked from the server."};break;
+	};
 });
 socket.on("disconnect",function(evt){
 	menu.hidden = false;
@@ -524,13 +590,13 @@ socket.on("map",function(evt){
 			for(var i = 0;i < droids.length;i++){
 				var d = droids[i];
 				m[d.x][d.y].u = null;
-				d.dir = dirwgtype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
 			};
+			droids = evt.r;
 			for(var i = 0;i < evt.r.length;i++){
 				var d = evt.r[i];
 				m[d.x][d.y].u = d;
+				d.dir = dirwgtype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
 			};
-			droids = evt.r;
 			if(!scrolledToMyDroids)for(var i = 0;i < droids.length;i++){//scrolls to your army
 				var d = droids[i];
 				if(d.team == myTeam){
@@ -559,7 +625,7 @@ socket.on("map",function(evt){
 						}else if(selected[j] == id){
 							delete selected[j];
 							ref = true;
-						}else if(d && d.target >= id)d.target--;
+						}//else if(d && d.target >= id)d.target--; this is performed for server already
 					}else{
 						ref = true;
 					};
@@ -642,85 +708,112 @@ var loopFunc = function(){
 	render(m,scrollX,scrollY)
 };
 var loop = 0;
+var menuOn = true;
 function init(){
 	can.onmousedown = function(evt){
-		smx = evt.offsetX + scrollX;
-		smy = evt.offsetY + scrollY;
-		tmx = Math.floor(smx / tileSize);
-		tmy = Math.floor(smy / tileSize);
-		marking = true;
+		if((evt.offsetX > 40) || (evt.offsetY > 320)){//out of interface
+			smx = evt.offsetX + scrollX;
+			smy = evt.offsetY + scrollY;
+			tmx = Math.floor(smx / tileSize);
+			tmy = Math.floor(smy / tileSize);
+			marking = true;
+		}else{//in interface
+			var id = Math.ceil((320 - evt.offsetY) / 32);
+			if(pressed.Control){
+				selected = [selected[id]];
+			}else if(pressed.Shift){
+				selected[id] = null;
+				selected = selected.filter(function(a){if(a !== null)return a});
+			}else{
+				var tmp = selected[id];
+				selected[id] = selected[0];
+				selected[0] = tmp;
+				console.log("exchange" + id);
+			};
+		};
 	};
 	can.onmouseup = function(evt){
-		var emx = evt.offsetX + scrollX;
-		var emy = evt.offsetY + scrollY;
-		var tex = Math.floor(emx / tileSize);
-		var tey = Math.floor(emy / tileSize);
-		if(m[tex] && m[tex][tey])
-		if(tmx == tex && tmy == tey){
-			var u = m[tmx][tmy].u;
-			if((u !== null) && (u.team == myTeam)){
-				if(!pressed.Control)clearSelect();
-				selected.push(u.id);
-				//oSelected[u.id] = true;
-			}else{
-				//find path and :>>>
-				var arr = [];
-				var attack = u !== null;
-				var dir = 0;
-				var w1 = 0;
-				var w2 = 0.5;
-				var dArrx = [0,1,0,-1];
-				var dArry = [-1,0,1,0];
-				for(var i = 0;i < selected.length;i++){
-					var d = droids[selected[i]];
-					if(d && (d.team == myTeam)){
-						if(!d.moving){
-							moving.push(d);
-							d.moving = true;
+		if(marking){
+			var emx = evt.offsetX + scrollX;
+			var emy = evt.offsetY + scrollY;
+			var tex = Math.floor(emx / tileSize);
+			var tey = Math.floor(emy / tileSize);
+			if(m[tex] && m[tex][tey])
+			if(tmx == tex && tmy == tey){
+				var u = m[tmx][tmy].u;
+				if((u !== null) && (u.team == myTeam)){
+					if(!pressed.Control)clearSelect();
+					selected.push(u.id);
+					//oSelected[u.id] = true;
+				}else{
+					//find path and :>>>
+					var arr = [];
+					var attack = u !== null;
+					var dir = 0;
+					var w1 = 0;
+					var w2 = 0.5;
+					var dArrx = [0,1,0,-1];
+					var dArry = [-1,0,1,0];
+					for(var i = 0;i < selected.length;i++){
+						var d = droids[selected[i]];
+						if(d && (d.team == myTeam)){
+							if(!d.moving){
+								moving.push(d);
+								d.moving = true;
+							};
+							d.path = pathTo(d.x,d.y,tmx,tmy);
+							d.targetX = tmx;
+							d.targetY = tmy;
+							if(attack)d.target = u.id;
+						do{
+						w1++;
+						tmx += dArrx[dir];
+						tmy += dArry[dir];
+						if(w1 >= w2){
+							w1 = 0;
+							w2 += 0.5;
+							dir = (dir + 1) % 4;
 						};
-						d.path = pathTo(d.x,d.y,tmx,tmy);
-						d.targetX = tmx;
-						d.targetY = tmy;
-						if(attack)d.target = u.id;
-					do{
-					w1++;
-					tmx += dArrx[dir];
-					tmy += dArry[dir];
-					if(w1 >= w2){
-						w1 = 0;
-						w2 += 0.5;
-						dir = (dir + 1) % 4;
+						}while(!(m[tmx]) || !(m[tmx][tmy]) || (m[tmx][tmy].t == 1) || (m[tmx][tmy].u !== null));
+						arr.push({i: d.id, x: d.targetX, y: d.targetY});
+						};
 					};
-					}while(!(m[tmx]) || !(m[tmx][tmy]) || (m[tmx][tmy].t == 1) || (m[tmx][tmy].u !== null));
-					arr.push({i: d.id, x: d.targetX, y: d.targetY});
-					};
+					socket.emit("action",{d: arr, i: attack ? u.id : false});
 				};
-				socket.emit("action",{d: arr, i: attack ? u.id : false});
-			};
-		}else{
-			var ex = Math.max(tmx,tex);
-			var ey = Math.max(tmy,tey);
-			var sx = Math.min(tmx,tex);
-			var sy = Math.min(tmy,tey);
-			if(!pressed.Control)clearSelect();
-			for(var i = sx;i <= ex;i++){
-				for(var j = sy;j <= ey;j++){
-					var u = m[i][j].u;
-					if(u !== null && u.team == myTeam){
-						selected.push(u.id);
-						//oSelected[u.id] = true;
+			}else{
+				var ex = Math.max(tmx,tex);
+				var ey = Math.max(tmy,tey);
+				var sx = Math.min(tmx,tex);
+				var sy = Math.min(tmy,tey);
+				if(!pressed.Control)clearSelect();
+				for(var i = sx;i <= ex;i++){
+					for(var j = sy;j <= ey;j++){
+						var u = m[i][j].u;
+						if(u !== null && u.team == myTeam){
+							selected.push(u.id);
+							//oSelected[u.id] = true;
+						}
 					}
 				}
-			}
-		};
+			};
 		marking = false;
+		};
 	};
 	can.onmousemove = function(evt){
 		mx = evt.offsetX + scrollX;
 		my = evt.offsetY + scrollY;
+		var tex = Math.floor(mx / tileSize);
+		var tey = Math.floor(my / tileSize);
+		var u = m[tex][tey].u;
+		if(u){
+			onDroid = u.id;
+		}else if(droids[selected[0]] && (droids[selected[0]].target !== false)){
+			onDroid = droids[selected[0]].target;
+		}else onDroid = false;
 	};
 	loop = setInterval(loopFunc,30);
 	console.log("loaded");
+	menuOn = false;
 };
 function deinit(){
 	scrolledToMyDroids = false;
@@ -728,5 +821,6 @@ function deinit(){
 	can.onmouseup = null;
 	can.onmousemove = null;
 	clearInterval(loop);
+	menuOn = true;
 };
 //init();

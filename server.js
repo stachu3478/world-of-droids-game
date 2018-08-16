@@ -314,8 +314,8 @@ function prepareTeams(){
 var chatBuffer = []; //bufor czatu
 
 function newSave(){
-	console.log("Saving data skipped.");
-	return false;
+	//console.log("Saving data skipped.");
+	//return false;
 	console.log("Saving data...");
 	var strBin = "";
 	for(var i = 0;i < m.length;i++){
@@ -342,6 +342,7 @@ function newSave(){
 	req({
 	  uri: "http://luatomcutils.cba.pl/wod.php",
 	  method: "POST",
+	  timeout: 10000,
 	  form: {
 		data: JSON.stringify(data),
 		password: "01h0fiq0e8r9urjnvlmzmvpwoqr910",

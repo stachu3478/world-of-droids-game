@@ -634,7 +634,7 @@ socket.on("map",function(evt){
 			if(ref)selected = selected.filter(function(a){return a});
 		});
 		socket.on("teams",function(evt){
-			teams = evt.t;
+			teams = evt;
 			for(var i = 0;i < teams.length;i++){
 				teams[i].cs = teams[i].r + teams[i].g + teams[i].b;
 			};

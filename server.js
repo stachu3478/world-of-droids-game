@@ -323,11 +323,13 @@ function newSave(){
 			strBin += m[i][j].t ? "1" : "0";
 		};
 	};
+	console.log("Binary length: "+strBin.length);
 	var dataCompressed = "";
 	for(var i = 0;i < strBin.length;i+=5){
 		var bins = strBin.slice(i,i + 5);
 		dataCompressed += parseInt(bins,2).toString(32);
 	};
+	console.log("Compressed data length: "+dataCompressed.length);
 	var tmp = [];
 	for(var i = 0;i < teams.length;i++){
 		var d = teams[i];
@@ -554,6 +556,9 @@ function init(){
 										//var evt = {user: this.username.toString()};
 										//io.emit('bye',evt);
 										//chatBuffer.push({m: 'bye', e: evt});
+										for(var i = 0;i < teams.length;i++){
+											if(teams[i].logged)return false;
+										};
 										newSave();
 									}else{
 										console.log("A user disconnected.  Reason: "+err);
@@ -591,7 +596,7 @@ function init(){
 													};
 												};
 												io.emit("err",{msg: "Kicked"});
-												newSave();
+												//newSave();
 											};break;
 											case "close":{
 												
@@ -623,7 +628,7 @@ function init(){
 				};
 				var newId = teams.length;
 				teams.push(new Team(newId,u));
-				newSave();
+				//newSave();
 				this.emit("err",{msg: "Temporary account created"});
 				this.broadcast.emit("teams",prepareTeams());
 			};

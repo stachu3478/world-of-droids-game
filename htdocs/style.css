@@ -47,14 +47,14 @@ ul{
 	position: fixed;
 	left: 5px;
 	bottom: 5px;
-	background-color: rgba(0,0,0,0.1);
+	background-color: rgba(0,0,0,0.2);
 	color: white;
 	padding: 3px;
 	font-family: Consolas;
 	font-size: 15px;
 }
 #chat:hover{
-	background-color: rgba(0,0,0,0.5);
+	background-color: rgba(0,0,0,0.6);
 	border: 1px grey solid;
 	padding: 2px;
 }

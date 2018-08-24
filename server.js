@@ -555,7 +555,7 @@ function init(){
 											var x = rx + Math.round(Math.random() * 10);
 											var y = ry + Math.round(Math.random() * 10);
 											var done = false;
-											if((m[x][y].t == 0) && (m[x][y].u == null)){
+											if((x < 100) && (y < 100) && (x >= 0) && (y >= 0) && (m[x][y].t == 0) && (m[x][y].u == null)){
 												done = true;
 												droids.push(new Droid(x,y,i));
 											};

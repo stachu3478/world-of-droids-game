@@ -530,7 +530,7 @@ function render(map,x,y){
 	if(marking){
 		txt = "X: " + tmx + " - " + tex + ", Y: " + tmy + " - " + tey;
 		ctx.strokeStyle = "lime";
-		ctx.fillStyle = "rgba(0,128,0,0.2)";
+		ctx.fillStyle = "rgba(0,128,0,0.3)";
 		var sx = Math.min(smx,mx) - scrollX;
 		var sy = Math.min(smy,my) - scrollY;
 		var width = Math.abs(smx - mx); 
@@ -585,7 +585,7 @@ function render(map,x,y){
 	ctx.fillStyle = "white";
 	ctx.fillText(txt,1,CH - 1);
 	var big = bigs[0];
-	if(big){
+	if(big){//render big notification
 		ctx.globalAlpha = 0;
 		if(big.t < 30){
 			ctx.globalAlpha = big.t / 30;
@@ -596,9 +596,11 @@ function render(map,x,y){
 		}else{
 			big.shift();
 		};
+		big.t++;
 		ctx.textAlign = "center";
 		ctx.fillText(big.m,CW / 2,CH / 4);
 		ctx.strokeText(big.m,CW / 2,CH / 4);
+		ctx.globalAlpha = 1;
 	};
 };
 function Droid(x,y,team){

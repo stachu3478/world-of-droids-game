@@ -121,6 +121,7 @@ var oSelected = {};
 var moving = [];
 var droids = [];
 var onDroid = false;
+var bigs = [];
 var tick = function(){
 	var ref = false;
 	for(var i = 0;i < moving.length;i++){

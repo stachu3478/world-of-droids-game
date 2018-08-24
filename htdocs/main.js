@@ -1,4 +1,7 @@
 var can = document.getElementById("c");
+var chat = document.getElementById("chat");
+var msgs = document.getElementById("msgs");
+var input = document.getElementById("chat_input");
 can.width = window.innerWidth;
 can.height = window.innerHeight;
 var CW = can.width;
@@ -9,6 +12,24 @@ window.onchange = function(){
 	CW = can.width;
 	CH = can.height;
 	if(menuOn)render(m,scrollX,scrollY);
+};
+var chatting = false;
+input.onfocus = function(){
+	chatting = true;
+};
+input.onblur = function(){
+	chatting = false;
+};
+input.onkeypress = function(evt){
+	if(evt.key == "Enter"){
+		var val = input.value;
+		if(val[0] == cmdPrefix){
+			chat.sendCmd(val.slice(1));
+		}else{
+			chat.send(val);
+		};
+		input.value = "";
+	};
 };
 var ctx = can.getContext("2d");
 var tileSize = 32;
@@ -22,8 +43,14 @@ var pressed = {
 document.body.onkeydown = function(evt){
 	pressed[evt.key] = true;
 	if(evt.key == " "){
-		selected = [];
-		evt.preventDefault();
+		if(marking){
+			marking = false;
+		}else{
+			selected = [];
+			if(!chatting)evt.preventDefault();
+		};
+	}else if(evt.key == "m"){
+		mapEnabled = !mapEnabled;
 	};
 };
 document.body.onkeyup = function(evt){
@@ -63,15 +90,16 @@ for(var it = 1;it <= droidTypes;it++){
 	dImages[i].b.onload = incl;
 };
 function dDroid(x,y,t,u){
-	var tp1 = u.dir || 0;
+	var tp1 = u.dir || 0; //old code propably
 	var a = u.dmg ? 0.5 : 1;
-	ctx.globalAlpha = a * t.r / t.cs;
+	ctx.globalAlpha = a * t.r / (t.cs / 4);
 	ctx.drawImage(dImages[tp1].r,x,y);
-	ctx.globalAlpha = a * t.g / t.cs;
+	ctx.globalAlpha = a * t.g / (t.cs / 2);
 	ctx.drawImage(dImages[tp1].g,x,y);
 	ctx.globalAlpha = a * t.b / t.cs;
 	ctx.drawImage(dImages[tp1].b,x,y);
 	ctx.globalAlpha = 1;
+	//ctx.putImageData(teams[u.team].img[tp1],x,y);
 };
 for(var i = 1;i < 5;i++){
 	var img = new Image();
@@ -341,6 +369,17 @@ var bCols = ["",
 	"rgb(64,192,64)",
 	"rgb(32,224,96)",
 ];
+function prerenderTile(img,r,g,b){
+	var imgData = ctx.createImageData(32,32);
+	for(var i = 0;i < imgData.data.length;i += 4){
+		var m = img.data[i]; //color strength xd
+		imgData.data[i] = Math.round((m / 255) * r);
+		imgData.data[i + 1] = Math.round((m / 255) * g);
+		imgData.data[i + 2] = Math.round((m / 255) * b);
+		imgData.data[i + 3] = Math.round(img.data[i + 3]);
+	};
+	return imgData;
+};
 function hpBar(p,x,y){
 	var sx = x + 30;
 	var sy = y + 29;
@@ -355,6 +394,7 @@ function hpBar(p,x,y){
 		sy -= 2;
 	};
 };
+var mapEnabled = true;
 function render(map,x,y){
 	var oX = x % tileSize;
 	var oY = y % tileSize;
@@ -371,38 +411,34 @@ function render(map,x,y){
 			var exists = (i >= 0) && (j >= 0) && (i < 100) && (j < 100);
 			if(exists){
 				var t = map[i][j].t;
-				if(t == 0){
-					ctx.drawImage(imgArray[0],px,py);
-				}else if(t == 1){
-					ctx.drawImage(imgArray[1],px,py);
-				}else{
-					ctx.drawImage(imgArray[2],px,py);
-				};
+				ctx.drawImage(imgArray[t] || imgArray[2],px,py);
 			}else{
 				ctx.drawImage(imgArray[3],px,py);
 			};
 		};
 	};
-	for(var i = 0;i < droids.length;i++){
+	for(var i = 0;i < droids.length;i++){//second one for droids
 		var u = droids[i];
 		if(u !== null){
 			var px = u.x * tileSize - scrollX;
 			var py = u.y * tileSize - scrollY;
-			var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-			var offsetX = 0;
-			var offsetY = 0;
-			if(u.moving){
-				var stamp = 1 - (((now - iStart) % 500) / 500);
-				if(stamp < u.maxOffset){
-					offsetX += (u.lastX - u.x) * stamp * tileSize;
-					offsetY += (u.lastY - u.y) * stamp * tileSize;
-					u.maxOffset = stamp;
+			if((px > -32) && (px < (CW + 32)) && (py > -32) && (py < (CH + 32))){
+				var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
+				var offsetX = 0;
+				var offsetY = 0;
+				if(u.moving){
+					var stamp = 1 - (((now - iStart) % 500) / 500);
+					if(stamp < u.maxOffset){
+						offsetX += (u.lastX - u.x) * stamp * tileSize;
+						offsetY += (u.lastY - u.y) * stamp * tileSize;
+						u.maxOffset = stamp;
+					};
 				};
+				if(isNaN(u.dir))u.dir = dirwgtype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
+				dDroid(px + offsetX,py + offsetY,t,u);
+				u.dmg = false;
+				if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 			};
-			if(isNaN(u.dir))u.dir = dirwgtype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
-			dDroid(px + offsetX,py + offsetY,t,u);
-			u.dmg = false;
-			if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 		};
 	};
 	ctx.fillStyle = "grey";
@@ -466,6 +502,27 @@ function render(map,x,y){
 			ctx.fillRect(32, ypos + 32 - u.hp * 0.64,8,u.hp * 0.64);
 		};
 	};
+	
+	if(mapEnabled){ //map drawing
+		var x = CW - 300;
+		var y = CH - 300;
+		ctx.fillStyle = "rgba(0,0,0,0.5)";
+		ctx.strokeStyle = "rgba(255,255,255,0.5)";
+		ctx.strokeRect(x, y, 300, 300);
+		ctx.fillRect(x, y, 300, 300);
+		ctx.fillStyle = "rgba(255,255,255,0.1)";
+		ctx.strokeRect(x + 3 * (scrollX / tileSize), y + 3 * (scrollY / tileSize), 3 * CW / tileSize, 3 * CH / tileSize);
+		ctx.fillRect(x + 3 * (scrollX / tileSize), y + 3 * (scrollY / tileSize), 3 * CW / tileSize, 3 * CH / tileSize);
+		for(var i = 0;i < droids.length;i++){
+			var u = droids[i];
+			if(u !== null){
+				var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
+				ctx.fillStyle = t.dcdec || "grey";
+				ctx.fillRect(x + u.x * 3,y + u.y * 3,3,3);
+			};
+		};
+	};
+	
 	var txt = "";
 	var tex = Math.floor(mx / tileSize);
 	var tey = Math.floor(my / tileSize);
@@ -482,6 +539,7 @@ function render(map,x,y){
 	}else{
 		txt = "X: " + tex + ", Y: " + tey;
 	};
+	txt += " " + serverLoad + " % / " + clientLoad + " %";
 	ctx.fillStyle = "black";
 	ctx.font = "12px Consolas";
 	var len = ctx.measureText(txt).width + 2;
@@ -489,6 +547,58 @@ function render(map,x,y){
 	ctx.fillRect(CW - len,CH - 14,len,14);
 	ctx.fillStyle = "white";
 	ctx.fillText(txt,CW - 1,CH - 1);
+	txt = "";
+	if(selected.length > 0){
+		if(onDroid !== false){
+			if(droids[onDroid].team == myTeam){
+				if(selected.indexOf(onDroid) == -1){
+					txt = "Ctrl + click to select.";
+				}else{
+					txt = "Shift + click to deselect.";
+				};
+			}else{
+				txt = "Click to attack.";
+			};
+		}else{
+			if(marking){
+				txt = "Press space to cancel.";
+			}else{
+				txt = "Control + click and drag to mark an another area of droid selection. Spacebar - deselect all. Click to move units.";
+			};
+		};
+	}else{
+		if(onDroid !== false && droids[onDroid].team == myTeam){
+			txt = "Click to select.";
+		}else{
+			if(marking){
+				txt = "Press space to cancel.";
+			}else{
+				txt = "Click and drag to mark an area of droid selection.";
+			};
+		};
+	};
+	ctx.fillStyle = "black";
+	var len = ctx.measureText(txt).width + 2;
+	ctx.textAlign = "left";
+	ctx.fillRect(0,CH - 14,len,14);
+	ctx.fillStyle = "white";
+	ctx.fillText(txt,1,CH - 1);
+	var big = bigs[0];
+	if(big){
+		ctx.globalAlpha = 0;
+		if(big.t < 30){
+			ctx.globalAlpha = big.t / 30;
+		}else if(big.t < 150){
+			ctx.globalAlpha = 1;
+		}else if(big.t < 180){
+			ctx.globalAlpha = (30 - big.t) / 30;
+		}else{
+			big.shift();
+		};
+		ctx.textAlign = "center";
+		ctx.fillText(big.m,CW / 2,CH / 4);
+		ctx.strokeText(big.m,CW / 2,CH / 4);
+	};
 };
 function Droid(x,y,team){
 	this.x = x;
@@ -522,8 +632,9 @@ function Map(x,y){
 	};
 };
 
+var dImagesData = [];
 function preinit(){
-	var map = new Map(100,100);
+	var map = new Map(100,100); //prepare menu background
 	m = map.map;
 	for(var i = 0;i < 10;i++){
 		do{
@@ -545,17 +656,78 @@ function preinit(){
 				droids.push(new Droid(x,y,1));
 			};
 		}while(!done);
-	render(m,scrollX,scrollY);
+	for(var i = 0;i < dImages.length;i++){//convert images to imageData objects
+		var img = dImages[i].r;
+		ctx.clearRect(0,0,32,32);
+		ctx.drawImage(img,0,0);
+		dImagesData.push(ctx.getImageData(0,0,32,32));
+	};
+	teams = [{img: [prerenderTile(dImagesData[0],Math.random() * 255, Math.random() * 255,Math.random() * 255)]}];
+	render(m,scrollX,scrollY);//draw that background
 };
-function red(str){
+function red(str){//just span with red color
 	var el = document.createElement("span");
 	el.style.color = "red";
 	el.innerText = str;
 	return el;
 };
 
+var cmdPrefix = "/";
+var chat = {
+	
+	history: [],
+	historyPos: 0,
+	cssClasses: [
+		
+		"chat_quest",
+		"chat_member",
+	],
+	prefixes: [
+		
+		"[Q]",
+		"[M]",
+	],
+	send: function(msg){
+		
+		var hl = this.history.length - 1;
+		if(this.history[hl] !== msg)this.history.push(msg);
+		this.historyPos = hl;
+		return socket.emit("msg", msg);
+	},
+	sendCmd: function(msg){
+		
+		var hl = this.history.length - 1;
+		var m = cmdPrefix + msg;
+		if(this.history[this.history.length] !== m)this.history.push(m);
+		this.historyPos = hl;
+		return socket.emit("cmd", msg);
+	},
+	receive: function(evt){
+		
+		var el = document.createElement("li");
+		if(evt.type == "msg"){
+			
+			var rId = evt.rank ? 0 : 1;
+			el.className = this.cssClasses[rId];
+			el.innerText = this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
+		}else if(evt.type == "server"){
+			el.className = "chat_server";
+			el.innerText = "[SERVER] " + evt.msg;
+		}else if(evt.type == "console"){
+			el.className = "chat_console";
+			el.innerText = evt.msg;
+		}else if(evt.type == "private"){
+			el.className = "chat_private";
+			el.innerText = "From: " + this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
+		};
+		msgs.appendChild(el);
+	},
+};
+
 //io stuff
 var firstLogin = true;
+var serverLoad = 0;
+var clientLoad = 0;
 var ue = document.getElementById("username");
 var pe = document.getElementById("password");
 var out = document.getElementById('noticeArea');
@@ -582,7 +754,15 @@ socket.on("map",function(evt){
 	m = evt.m;
 	teams = evt.t;
 	for(var i = 0;i < teams.length;i++){
-		teams[i].cs = teams[i].r + teams[i].g + teams[i].b;
+		var t = teams[i];
+		t.cs = t.r + t.g + t.b;
+		t.img = [];
+		for(var j = 0;j < dImagesData.length;j++){
+			t.img.push(prerenderTile(dImagesData[j],t.r,t.g,t.b));
+		};
+	};
+	for(var i = 0;i < evt.c.length;i++){
+		chat.receive(evt.c[i]);
 	};
 	myTeam = evt.i;
 	if(firstLogin){
@@ -611,7 +791,7 @@ socket.on("map",function(evt){
 				clearInterval(inter);
 				inter = setInterval(tick,500);
 				iStart = Date.now();
-				console.log("Equalizing server tick.");
+				//console.log("Equalizing server tick.");
 			};
 			var dl = evt.d;
 			var ref = false;
@@ -632,54 +812,33 @@ socket.on("map",function(evt){
 				};
 			};
 			if(ref)selected = selected.filter(function(a){return a});
+			serverLoad = Math.round(evt.load);
 		});
 		socket.on("teams",function(evt){
+			
 			teams = evt;
 			for(var i = 0;i < teams.length;i++){
-				teams[i].cs = teams[i].r + teams[i].g + teams[i].b;
+				var t = teams[i];
+				t.cs = t.r + t.g + t.b;
+				t.img = [];
+				for(var j = 0;j < dImagesData.length;j++){
+					t.img.push(prerenderTile(dImagesData[j],t.r,t.g,t.b));
+				};
 			};
 		})
 		firstLogin = false;
+		socket.on('msg',function(evt){
+			
+			chat.receive(evt);
+			//msgs.innerHTML += "<li><br>"+teams[evt.id].username+": "+evt.msg + "</li>";
+		});
+		socket.on('big_msg',function(evt){
+			bigs.push({m: evt, t: 0});
+		});
 	};
 	init();
 	menu.hidden = true;
 });
-/*
-var chat = document.getElementById("ch");
-var txt = document.getElementById('msg');
-document.getElementById("sendChat").onclick = function(){
-	socket.emit('msg',txt.value);
-	txt.value = "";
-};
-document.getElementById("userSet").onclick = function(){
-	socket.emit('userset',document.getElementById('username').value);
-};
-socket.on('msg',function(evt){
-	chat.innerHTML += "<br>"+evt.user+": "+evt.msg;
-});
-socket.on('userset',function(evt){
-	chat.innerHTML += "<br>"+evt.old+" zmienia nick na: "+evt.snew;
-});
-socket.on('hi',function(evt){
-	chat.innerHTML += "<br>"+evt.user+" dołącza do rozmowy.";
-});
-socket.on('bye',function(evt){
-	chat.innerHTML += "<br>"+evt.user+" wychodzi.";
-});
-socket.on('buffer',function(evt){
-	for(var i = 0;i < evt.length;i++){
-		var e = evt[i];
-		if(e.m == 'msg'){
-			chat.innerHTML += "<br>"+e.e.user+": "+e.e.msg;
-		}else if(e.m == 'userset'){
-			chat.innerHTML += "<br>"+e.e.old+" zmienia nick na: "+e.e.snew;
-		}else if(e.m == 'hi'){
-			chat.innerHTML += "<br>"+evt.user+" dołącza do rozmowy.";
-		}else if(e.m == 'bye'){
-			chat.innerHTML += "<br>"+evt.user+" wychodzi.";
-		};
-	};
-})*/
 
 function scrol(x,y){
 	if(scrollX % 4 !== 0){
@@ -695,17 +854,24 @@ function scrol(x,y){
 };
 var mapSizePx = 100 * tileSize;
 var loopFunc = function(){
-	if(pressed.w){
-		if(scrollY > 0)scrol(0,-4);
-	}else if(pressed.s){
-		if(scrollY < mapSizePx - CH)scrol(0,4);
+	
+	var then = Date.now();
+	
+	if(!chatting){
+		if(pressed.w){
+			if(scrollY > 0)scrol(0,-4);
+		}else if(pressed.s){
+			if(scrollY < mapSizePx - CH)scrol(0,4);
+		};
+		if(pressed.d){
+			if(scrollX < mapSizePx - CW)scrol(4,0);
+		}else if(pressed.a){
+			if(scrollX > 0)scrol(-4,0);
+		};
+		render(m,scrollX,scrollY)
 	};
-	if(pressed.d){
-		if(scrollX < mapSizePx - CW)scrol(4,0);
-	}else if(pressed.a){
-		if(scrollX > 0)scrol(-4,0);
-	};
-	render(m,scrollX,scrollY)
+	
+	clientLoad = Math.round((Date.now() - then) / 0.3);
 };
 var loop = 0;
 var menuOn = true;
@@ -728,7 +894,7 @@ function init(){
 				var tmp = selected[id];
 				selected[id] = selected[0];
 				selected[0] = tmp;
-				console.log("exchange" + id);
+				//console.log("exchange" + id);
 			};
 		};
 	};
@@ -742,9 +908,15 @@ function init(){
 			if(tmx == tex && tmy == tey){
 				var u = m[tmx][tmy].u;
 				if((u !== null) && (u.team == myTeam)){
-					if(!pressed.Control)clearSelect();
-					selected.push(u.id);
-					//oSelected[u.id] = true;
+					if(pressed.Shift && selected.indexOf(u.id) !== -1){
+						var id = selected.indexOf(u.id);
+						selected[id] = null;
+						selected = selected.filter(function(a){if(a !== null)return a});
+					}else{
+						if(!pressed.Control)clearSelect();
+						if(selected.indexOf(u.id) !== -1)selected.push(u.id);
+						//oSelected[u.id] = true;
+					};
 				}else{
 					//find path and :>>>
 					var arr = [];

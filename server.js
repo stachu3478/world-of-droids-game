@@ -14,7 +14,9 @@ app.use(express.static('htdocs'));
  // res.sendFile(__dirname + '/htdocs/' + req.url);
 //});
 var moving = [];
+var cpuLoad = 0;
 var inter = setInterval(function(){
+	var then = Date.now();
 	var ref = false;
 	for(var i = 0;i < moving.length;i++){
 		var d = moving[i];
@@ -59,8 +61,9 @@ var inter = setInterval(function(){
 		};
 	};
 	if(ref)moving = moving.filter(function(a){if(a && (a.hp > 0))return a});
-	io.emit("d",{r: droids, m: moving, d: deleted});
+	io.emit("d",{r: droids, m: moving, d: deleted, load: cpuLoad});
 	deleted = [];
+	cpuLoad = (Date.now() - then) / 5;
 },500);
 var iStart = Date.now();
 
@@ -146,6 +149,7 @@ function delDroid(d){
 			};
 			teams[t].logged = false;
 			teams[t].anihilated = true;
+			io.emit("big_msg",teams[t].u + " was annihilated.");
 		};
 	};
 };
@@ -311,8 +315,6 @@ function prepareTeams(){
 	return toSend;
 };
 
-var chatBuffer = []; //bufor czatu
-
 function newSave(){
 	//console.log("Saving data skipped.");
 	//return false;
@@ -323,13 +325,13 @@ function newSave(){
 			strBin += m[i][j].t ? "1" : "0";
 		};
 	};
-	console.log("Binary length: "+strBin.length);
+	//console.log("Binary length: "+strBin.length);
 	var dataCompressed = "";
 	for(var i = 0;i < strBin.length;i+=5){
 		var bins = strBin.slice(i,i + 5);
 		dataCompressed += parseInt(bins,2).toString(32);
 	};
-	console.log("Compressed data length: "+dataCompressed.length);
+	//console.log("Compressed data length: "+dataCompressed.length);
 	var tmp = [];
 	for(var i = 0;i < teams.length;i++){
 		var d = teams[i];
@@ -381,10 +383,13 @@ function newLoad(){
 			m = map.map;
 			var strBin = "";
 			var mapStr = data.map;
+			//console.log("Map size: "+mapStr.length);
 			for(var i = 0;i < mapStr.length;i++){
-				strBin += parseInt(mapStr[i],32).toString(2);
+				var part = parseInt(mapStr[i],32).toString(2)
+				strBin += "0".repeat(5 - part.length) + parseInt(mapStr[i],32).toString(2);
 			};
 			var it = 0;
+			//console.log("Binary size: "+strBin.length);
 			for(var i = 0;i < m.length;i++){
 				for(var j = 0;j < m[i].length;j++){
 					m[i][j].t = parseInt(strBin[it]);
@@ -508,6 +513,19 @@ function load(){
 	});
 }
 
+var chat = {
+	
+	buffer: [],
+	send: function(evt){
+		
+		var evt = evt;
+		evt.rank = teams[evt.id].temp;
+		this.buffer.push(evt);
+		if(this.buffer.length > 20)this.buffer.shift();
+		return io.emit("msg", evt);
+	},
+};
+
 var m = [];
 function init(){
 	
@@ -546,7 +564,7 @@ function init(){
 									teams[i].anihilated = false;
 								};
 								console.log(teams[i].u + " logged in, id: " + this._id);
-								this.emit("map",{m: m,t: prepareTeams(),i: i});
+								this.emit("map",{m: m,t: prepareTeams(),i: i,c: chat.buffer});
 								
 								this.on('disconnect',function(err){
 									if(this._id > -1){
@@ -555,7 +573,7 @@ function init(){
 										this._id = -1;
 										//var evt = {user: this.username.toString()};
 										//io.emit('bye',evt);
-										//chatBuffer.push({m: 'bye', e: evt});
+										//chat.buffer.push({m: 'bye', e: evt});
 										for(var i = 0;i < teams.length;i++){
 											if(teams[i].logged)return false;
 										};
@@ -585,6 +603,7 @@ function init(){
 								});
 								
 								this.on('cmd',function(cmd){
+									var arr = cmd.split(" ");
 									if(this._id == 0){//verify op
 										switch(cmd){
 											case "remap":{
@@ -596,6 +615,7 @@ function init(){
 													};
 												};
 												io.emit("err",{msg: "Kicked"});
+												chat.send({id: -1, msg: "Server map restart.", type: "server"});
 												//newSave();
 											};break;
 											case "close":{
@@ -603,18 +623,28 @@ function init(){
 											};break;
 										};
 									};
+									switch(cmd){
+										case "msg":{
+											//teams({id: this._id, msg:})
+										};break;
+										case "ping":{
+											this.emit("msg",{id: this._id, msg: "Pong!", type: "console"});
+										};break;
+									};
 								});
 								
 								this.on('msg',function(msg){
-									var evt = {user: this.username.toString(), msg: msg};
-									io.emit('msg',evt);
-									chatBuffer.push({m: 'msg', e: evt});
+									if(this._id > -1){
+										var evt = {id: this._id, msg: msg, type: "msg"};
+										chat.send(evt);
+									};
 								});
+								
 								this.on('userset',function(set){
 									var evt = {old: this.username.toString(), snew: set};
 									io.emit('userset',evt);
 									this.username = set;
-									chatBuffer.push({m: 'userset', e: evt});
+									chat.buffer.push({m: 'userset', e: evt});
 								});
 								
 								return true;
@@ -633,12 +663,8 @@ function init(){
 				this.broadcast.emit("teams",prepareTeams());
 			};
 		});
-		//s.emit('map',chatBuffer); //wysyla iwenta
 		s._id = -1;
 		console.log("A user connected.");
-		//var evt = {user: s.username.toString()};
-		//io.emit('hi',evt);
-		//chatBuffer.push({m: 'hi', e: evt});
 	});
 };
 init();

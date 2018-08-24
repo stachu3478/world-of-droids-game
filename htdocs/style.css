@@ -1,3 +1,8 @@
+body{
+	margin: 0;
+	overflow-x: hidden;
+	overflow-y: hidden;
+}
 div{
 	padding: 5px;
 }
@@ -15,4 +20,41 @@ button:active{
 input{
 	color: black;
 	background-color: lightGrey;
+}
+.chat_quest{
+	color: lightgray;
+}
+.chat_member{
+	color: white;
+}
+.chat_console{
+	color: rgb(255,255,128);
+}
+.chat_server{
+	color: purple;
+	font-weight: bold;
+}
+.chat_private{
+	color: aliceblue;
+}
+ul{
+	margin-left: 3px;
+	padding-left: 3px;
+}
+#chat{
+	width: 360px;
+	height: 360px;
+	position: fixed;
+	left: 5px;
+	bottom: 5px;
+	background-color: rgba(0,0,0,0.1);
+	color: white;
+	padding: 3px;
+	font-family: Consolas;
+	font-size: 15px;
+}
+#chat:hover{
+	background-color: rgba(0,0,0,0.5);
+	border: 1px grey solid;
+	padding: 2px;
 }

@@ -1,11 +1,20 @@
 var can = document.getElementById("c");
-var chat = document.getElementById("chat");
+var chate = document.getElementById("chat");
 var msgs = document.getElementById("msgs");
 var input = document.getElementById("chat_input");
+var overlay = document.getElementById("overlay");
+var lpanel = document.getElementById("login");
+var rpanel = document.getElementById("register");
 can.width = window.innerWidth;
 can.height = window.innerHeight;
 var CW = can.width;
 var CH = can.height;
+
+var cv2 = document.createElement("canvas"); //secondary canvas element for converting imageData to Image
+cv2.width = 32;
+cv2.height = 32;
+var ctx2 = cv2.getContext("2d");
+
 window.onchange = function(){
 	can.width = window.innerWidth;
 	can.height = window.innerHeight;
@@ -42,19 +51,43 @@ var pressed = {
 };
 document.body.onkeydown = function(evt){
 	pressed[evt.key] = true;
-	if(evt.key == " "){
+	switch(evt.key){
+	case " ":{
 		if(marking){
 			marking = false;
 		}else{
 			selected = [];
 			if(!chatting)evt.preventDefault();
 		};
-	}else if(evt.key == "m"){
+	};break;
+	case "m":{
 		mapEnabled = !mapEnabled;
-	};
+	};break;
+	}
 };
 document.body.onkeyup = function(evt){
 	pressed[evt.key] = false;
+};
+
+function checkp(){
+	if((document.getElementById("password_reg1").value == document.getElementById("password_reg2").value) && (document.getElementById("agree").checked)){
+		document.getElementById("regbtn").disabled = false;
+	}else{
+		document.getElementById("regbtn").disabled = true;
+	};
+};
+function register(){
+	var ob = {
+		u: document.getElementById("username_reg").value,
+		p: document.getElementById("password_reg1").value,
+		e: document.getElementById("email").value,
+	};
+	socket.emit("register",ob);
+};
+function backReg(){
+	lpanel.hidden = false;
+	rpanel.hidden = true;
+	overlay.hidden = true;
 };
 
 const droidTypes = 4;
@@ -91,15 +124,15 @@ for(var it = 1;it <= droidTypes;it++){
 };
 function dDroid(x,y,t,u){
 	var tp1 = u.dir || 0; //old code propably
-	var a = u.dmg ? 0.5 : 1;
+	/*var a = u.dmg ? 0.5 : 1;
 	ctx.globalAlpha = a * t.r / (t.cs / 4);
 	ctx.drawImage(dImages[tp1].r,x,y);
 	ctx.globalAlpha = a * t.g / (t.cs / 2);
 	ctx.drawImage(dImages[tp1].g,x,y);
 	ctx.globalAlpha = a * t.b / t.cs;
 	ctx.drawImage(dImages[tp1].b,x,y);
-	ctx.globalAlpha = 1;
-	//ctx.putImageData(teams[u.team].img[tp1],x,y);
+	ctx.globalAlpha = 1;*/
+	ctx.drawImage(teams[u.team].img[tp1],x,y);
 };
 for(var i = 1;i < 5;i++){
 	var img = new Image();
@@ -372,14 +405,20 @@ var bCols = ["",
 ];
 function prerenderTile(img,r,g,b){
 	var imgData = ctx.createImageData(32,32);
+	var dat = img.data;
 	for(var i = 0;i < imgData.data.length;i += 4){
-		var m = img.data[i]; //color strength xd
-		imgData.data[i] = Math.round((m / 255) * r);
-		imgData.data[i + 1] = Math.round((m / 255) * g);
-		imgData.data[i + 2] = Math.round((m / 255) * b);
+		var base = (dat[i + 1] + dat[i + 2]) / 2;
+		var m = dat[i] - base; //color strength xd
+		imgData.data[i] = base + Math.round((m / 255) * r);
+		imgData.data[i + 1] = base + Math.round((m / 255) * g);
+		imgData.data[i + 2] = base + Math.round((m / 255) * b);
 		imgData.data[i + 3] = Math.round(img.data[i + 3]);
 	};
-	return imgData;
+	ctx2.clearRect(0,0,32,32);
+	ctx2.putImageData(imgData,0,0);
+	var img2 = new Image();
+	img2.src = cv2.toDataURL("image/png");
+	return img2;
 };
 function hpBar(p,x,y){
 	var sx = x + 30;
@@ -584,6 +623,16 @@ function render(map,x,y){
 	ctx.fillRect(0,CH - 14,len,14);
 	ctx.fillStyle = "white";
 	ctx.fillText(txt,1,CH - 1);
+	
+	if(!teams[myTeam].p){
+		ctx.font = "16px Consolas";//register button
+		ctx.fillStyle = "rgb(64,64,64)";
+		ctx.fillRect(0,0,75,20);
+		ctx.strokeRect(0,0,75,20);
+		ctx.fillStyle = "white";
+		ctx.fillText("Register",0,10);
+	};
+	
 	var big = bigs[0];
 	if(big){//render big notification
 		ctx.globalAlpha = 0;
@@ -722,6 +771,9 @@ var chat = {
 		}else if(evt.type == "private"){
 			el.className = "chat_private";
 			el.innerText = "From: " + this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
+		}else if(evt.type == "bprivate"){
+			el.className = "chat_private";
+			el.innerText = "To: " + this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
 		};
 		msgs.appendChild(el);
 	},
@@ -734,6 +786,7 @@ var clientLoad = 0;
 var ue = document.getElementById("username");
 var pe = document.getElementById("password");
 var out = document.getElementById('noticeArea');
+var out2 = document.getElementById('rnoticeArea');
 var menu = document.getElementById('overlay');
 var scrolledToMyDroids = false;
 var tryLogin = function(){
@@ -746,6 +799,9 @@ socket.on("err",function(err){
 		case "Wrong password": {out.innerText = red("Wrong password or login.")};break;
 		case "Your army was destroyed!": {menu.hidden = false;deinit();out.innerText = "Your army has been destroyed!"};break;
 		case "Kicked": {menu.hidden = false;deinit();out.innerText = "You were kicked from the server."};break;
+		case "Invalid email": {out2.innerText = "Invalid e-mail"};break;
+		case "Same email or nickname exists": {out2.innerText = "Same email or nickname exists"};break;
+		case "Register_done": {out2.innerText = "You have been registered.";backReg()};break;
 	};
 });
 socket.on("disconnect",function(evt){
@@ -838,6 +894,9 @@ socket.on("map",function(evt){
 		socket.on('big_msg',function(evt){
 			bigs.push({m: evt, t: 0});
 		});
+		socket.on('register_done',function(){
+			backReg();
+		});
 	};
 	init();
 	menu.hidden = true;
@@ -886,6 +945,11 @@ function init(){
 			tmx = Math.floor(smx / tileSize);
 			tmy = Math.floor(smy / tileSize);
 			marking = true;
+		}else if((evt.offsetY < 21) && !myTeam.p){//register button
+			lpanel.hidden = true;
+			rpanel.hidden = false;
+			overlay.hidden = false;
+			document.getElementById("username_reg").value = teams[myTeam].u;
 		}else{//in interface
 			var id = Math.ceil((320 - evt.offsetY) / 32);
 			if(pressed.Control){
@@ -917,7 +981,7 @@ function init(){
 						selected = selected.filter(function(a){if(a !== null)return a});
 					}else{
 						if(!pressed.Control)clearSelect();
-						if(selected.indexOf(u.id) !== -1)selected.push(u.id);
+						if(selected.indexOf(u.id) == -1)selected.push(u.id);
 						//oSelected[u.id] = true;
 					};
 				}else{
@@ -965,7 +1029,7 @@ function init(){
 					for(var j = sy;j <= ey;j++){
 						var u = m[i][j].u;
 						if(u !== null && u.team == myTeam){
-							selected.push(u.id);
+							if(selected.indexOf(u.id) == -1)selected.push(u.id);
 							//oSelected[u.id] = true;
 						}
 					}

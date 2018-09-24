@@ -17,6 +17,9 @@ button:hover{
 button:active{
 	background-color: black;
 }
+button:disabled{
+	background-color: rgb(32,32,32);
+}
 input{
 	color: black;
 	background-color: lightGrey;

@@ -80,7 +80,8 @@ function Team(id,u,p,r,g,b){
 	this.units = [];
 	this.s = false;
 	this.anihilated = true;
-	this.temp = p == undefined; 
+	this.temp = p == undefined;
+	this.e = "";
 };
 var teams = [
 	new Team(0,"admin","admin",255,1,1),
@@ -605,7 +606,7 @@ function init(){
 								this.on('cmd',function(cmd){
 									var arr = cmd.split(" ");
 									if(this._id == 0){//verify op
-										switch(cmd){
+										switch(arr[0]){
 											case "remap":{
 												var map = new Map(100,100);
 												m = map.map;
@@ -623,12 +624,22 @@ function init(){
 											};break;
 										};
 									};
-									switch(cmd){
+									switch(arr[0]){
 										case "msg":{
+											var name = arr[1];
+											for(var i = 0;i < teams.length;i++){
+												if(teams[i].u == name){
+													this.emit("msg",{id: teams[i].id, msg: arr.slice(2).join(" "),type: "bprivate"})
+													return teams.s.emit("msg",{id: this._id, msg: arr.slice(2).join(" "), type: "privete"});
+												};
+											};
 											//teams({id: this._id, msg:})
 										};break;
 										case "ping":{
 											this.emit("msg",{id: this._id, msg: "Pong!", type: "console"});
+										};break;
+										case "help":{
+											this.emit("msg",{id: this._id, msg: "Commands: /help, /ping, /msg <player> <message>", type: "console"});
 										};break;
 									};
 								});
@@ -640,11 +651,22 @@ function init(){
 									};
 								});
 								
-								this.on('userset',function(set){
-									var evt = {old: this.username.toString(), snew: set};
-									io.emit('userset',evt);
-									this.username = set;
-									chat.buffer.push({m: 'userset', e: evt});
+								if(!teams[i].p)
+								this.on('register',function(set){
+									var pate = /.+@.+\..+/;
+									if(!pate.test(set.e))return this.emit("err",{msg: "Invalid email"});
+									for(var j = 0;j < teams.length;j++){
+										if((teams[j].u == set.u) || ((teams[j].e || "") == set.e)){
+											if(this._id !== j){
+												return this.emit("err",{msg: "Same email or nickname exists"});
+											};
+										};
+									};
+									var dac = teams[this._id];
+									dac.u = set.u;
+									dac.p = set.p;
+									dac.e = set.e;
+									this.emit("err",{msg: "Register_done"});
 								});
 								
 								return true;

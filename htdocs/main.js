@@ -643,7 +643,7 @@ function render(map,x,y){
 		}else if(big.t < 180){
 			ctx.globalAlpha = (30 - big.t) / 30;
 		}else{
-			big.shift();
+			bigs.shift();
 		};
 		big.t++;
 		ctx.textAlign = "center";
@@ -741,6 +741,7 @@ var chat = {
 	],
 	send: function(msg){
 		
+		if(msg == '')return false;
 		var hl = this.history.length - 1;
 		if(this.history[hl] !== msg)this.history.push(msg);
 		this.historyPos = hl;

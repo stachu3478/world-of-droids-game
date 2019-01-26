@@ -28,7 +28,7 @@ var inter = setInterval(function(){
 				d.moving = false;
 				d.maxOffset = 0;
 				d.dmg = false;
-			}else if(p && (m[p[0]][p[1]].u == null)){
+			}else if(p && (m[p[0]][p[1]].u == null) && (m[p[0]][p[1]].t == 0)){
 				var target = droids[d.target];
 				if(target && (dist(d.x - target.x,d.y - target.y) <= 5)){
 					attack(d,target);
@@ -417,103 +417,6 @@ function newLoad(){
 	});
 };
 
-function save(){
-	for(var i = 0;i < m.length;i++){
-		for(var j = 0;j < m[i].length;j++){
-			m[i][j].u = null;
-		};
-	};
-	fs.writeFile("data/map.dat",JSON.stringify(m),function(err){
-		if(err)throw err;
-		console.log("Map saved");
-	});
-	fs.writeFile("data/droids.dat",JSON.stringify(droids),function(err){
-		if(err)throw err;
-		console.log("Units saved");
-	});
-	for(var i = 0;i < droids.length;i++){
-		var d = droids[i];
-		m[d.x][d.y].u = d;
-	};
-	var tmp = [];
-	for(var i = 0;i < teams.length;i++){
-		var d = teams[i];
-		tmp.push(teams[i].s);
-		delete teams[i].s;
-	};
-	fs.writeFile("data/teams.dat",JSON.stringify(teams),function(err){
-		if(err)throw err;
-		console.log("Accounts saved");
-	});
-	for(var i = 0;i < teams.length;i++){
-		teams[i].s = tmp[i];
-	};
-};
-
-function load(){
-	try{
-		fs.accessSync("data");
-	}catch(err){
-		fs.mkdirSync("data");
-	};
-	fs.access("data/accounts", fs.constants.F_OK, (err) => {
-		if(err){
-			fs.mkdirSync("data/accounts");
-		};
-		fs.readFile("data/map.dat", (err,data) => {
-			if(err || !data || (data.length < 1)){
-				var map = new Map(100,100);
-				m = map.map;
-				for(var i = 0;i < 10;i++){
-					do{
-						var x = 45 + Math.round(Math.random() * 10);
-						var y = 45 + Math.round(Math.random() * 10);
-						var done = false;
-						if((m[x][y].t == 0) && (m[x][y].u == null)){
-							done = true;
-							droids.push(new Droid(x,y,0));
-						};
-					}while(!done);
-				};
-					do{
-						var x = 10 + Math.round(Math.random() * 80);
-						var y = 10 + Math.round(Math.random() * 80);
-						var done = false;
-						if((m[x][y].t == 0) && (m[x][y].u == null)){
-							done = true;
-							droids.push(new Droid(x,y,1));
-						};
-					}while(!done);
-				save();
-			}else{
-				m = JSON.parse(data);
-				moving = [];
-				fs.readFile("data/droids.dat", (err,data) => {
-					if(err)throw err;
-					droids = JSON.parse(data).filter(function(a){if(a.hp){return a}else{m[a.x][a.y].u = null}});
-					fs.readFile("data/teams.dat", (err,data) => {
-						if(err)throw err;
-						teams = JSON.parse(data);
-						for(var i = 0;i < teams.length;i++){
-							teams[i].anihilated = true;
-						};
-						for(var i = 0;i < droids.length;i++){
-							var d = droids[i];
-							m[d.x][d.y].u = d;
-							if(d.moving){
-								moving.push(d);
-							};
-							if(teams[d.team].anihilated)teams[d.team].anihilated = false;
-							if(d.type == undefined)d.type = 0;
-						};
-						console.log("Map loaded");
-					});
-				});
-			};
-		});
-	});
-}
-
 var chat = {
 	
 	buffer: [],
@@ -539,142 +442,140 @@ function init(){
 				var exists = false;
 				for(var i = 0;i < teams.length;i++){
 					if(teams[i].u == u){
-						if(teams[i].p == p || teams[i].temp){
-							if(teams[i].logged){
-								//already in the game
-								console.log(teams[i].u + " tried to log in.");
-								return;
-							}else{
-								this._id = i;
-								teams[i].logged = true;
-								teams[i].s = this;
-								if(teams[i].anihilated){//make new army while destroyed
-									var rx = 5 + Math.round(Math.random() * 90);
-									var ry = 5 + Math.round(Math.random() * 90);
-									for(var j = 0;j < 10;j++){
-										do{
-											var x = rx + Math.round(Math.random() * 10);
-											var y = ry + Math.round(Math.random() * 10);
-											var done = false;
-											if((x < 100) && (y < 100) && (x >= 0) && (y >= 0) && (m[x][y].t == 0) && (m[x][y].u == null)){
-												done = true;
-												droids.push(new Droid(x,y,i));
-											};
-										}while(!done);
-									};
-									teams[i].anihilated = false;
-								};
-								console.log(teams[i].u + " logged in, id: " + this._id);
-								this.emit("map",{m: m,t: prepareTeams(),i: i,c: chat.buffer});
-								
-								this.on('disconnect',function(err){
-									if(this._id > -1){
-										console.log(teams[this._id].u + " disconnected. Reason: "+err);
-										teams[this._id].logged = false;
-										this._id = -1;
-										//var evt = {user: this.username.toString()};
-										//io.emit('bye',evt);
-										//chat.buffer.push({m: 'bye', e: evt});
-										for(var i = 0;i < teams.length;i++){
-											if(teams[i].logged)return false;
-										};
-										newSave();
-									}else{
-										console.log("A user disconnected.  Reason: "+err);
-									};
-									//console.log();
-								});
-								
-								this.on('action',function(msg){//object with array of droids ids and targets coordinates i,x,y + target id {d:[],i: Int}
-									for(var i = 0;i < msg.d.length;i++){
-										var d = droids[msg.d[i].i];
-										if(d && (d.team == this._id)){//valid team?
-											if(!d.moving){
-												moving.push(d);
-												d.moving = true;
-											};
-											d.path = pathTo(d.x,d.y,msg.d[i].x,msg.d[i].y);
-											d.targetX = msg.d[i].x;
-											d.targetY = msg.d[i].y;
-											d.target = msg.i;
-										}else if(d){
-											console.log("Invalid team: found: ",d.team,", expected ",this._id);
-										};
-									};
-								});
-								
-								this.on('cmd',function(cmd){
-									var arr = cmd.split(" ");
-									if(this._id == 0){//verify op
-										switch(arr[0]){
-											case "remap":{
-												var map = new Map(100,100);
-												m = map.map;
-												for(var i = 0;i < teams.length;i++){
-													if(teams[i].logged){
-														teams[i].logged = false;
-													};
-												};
-												io.emit("err",{msg: "Kicked"});
-												chat.send({id: -1, msg: "Server map restart.", type: "server"});
-												//newSave();
-											};break;
-											case "close":{
-												
-											};break;
-										};
-									};
-									switch(arr[0]){
-										case "msg":{
-											var name = arr[1];
-											for(var i = 0;i < teams.length;i++){
-												if(teams[i].u == name){
-													this.emit("msg",{id: teams[i].id, msg: arr.slice(2).join(" "),type: "bprivate"})
-													return teams.s.emit("msg",{id: this._id, msg: arr.slice(2).join(" "), type: "privete"});
-												};
-											};
-											//teams({id: this._id, msg:})
-										};break;
-										case "ping":{
-											this.emit("msg",{id: this._id, msg: "Pong!", type: "console"});
-										};break;
-										case "help":{
-											this.emit("msg",{id: this._id, msg: "Commands: /help, /ping, /msg <player> <message>", type: "console"});
-										};break;
-									};
-								});
-								
-								this.on('msg',function(msg){
-									if(this._id > -1){
-										var evt = {id: this._id, msg: msg, type: "msg"};
-										chat.send(evt);
-									};
-								});
-								
-								if(!teams[i].p)
-								this.on('register',function(set){
-									var pate = /.+@.+\..+/;
-									if(!pate.test(set.e))return this.emit("err",{msg: "Invalid email"});
-									for(var j = 0;j < teams.length;j++){
-										if((teams[j].u == set.u) || ((teams[j].e || "") == set.e)){
-											if(this._id !== j){
-												return this.emit("err",{msg: "Same email or nickname exists"});
-											};
-										};
-									};
-									var dac = teams[this._id];
-									dac.u = set.u;
-									dac.p = set.p;
-									dac.e = set.e;
-									this.emit("err",{msg: "Register_done"});
-								});
-								
-								return true;
-								break;
-							};
-						}else{
+						if(teams[i].p != p && !teams[i].temp){
 							this.emit("err",{msg: p == "" ? "Password needed" : "Wrong password"});
-						}
+						}else if(teams[i].logged){
+							//already in the game
+							console.log(teams[i].u + " tried to log in.");
+							return;
+						}else{
+							this._id = i;
+							teams[i].logged = true;
+							teams[i].s = this;
+							if(teams[i].anihilated){//make new army while destroyed
+								var rx = 5 + Math.round(Math.random() * 90);
+								var ry = 5 + Math.round(Math.random() * 90);
+								for(var j = 0;j < 10;j++){
+									do{
+										var x = rx + Math.round(Math.random() * 10);
+										var y = ry + Math.round(Math.random() * 10);
+										var done = false;
+										if((x < 100) && (y < 100) && (x >= 0) && (y >= 0) && (m[x][y].t == 0) && (m[x][y].u == null)){
+											done = true;
+											droids.push(new Droid(x,y,i));
+										};
+									}while(!done);
+								};
+								teams[i].anihilated = false;
+							};
+							console.log(teams[i].u + " logged in, id: " + this._id);
+							this.emit("map",{m: m,t: prepareTeams(),i: i,c: chat.buffer});
+							
+							this.on('disconnect',function(err){
+								if(this._id > -1){
+									console.log(teams[this._id].u + " disconnected. Reason: "+err);
+									teams[this._id].logged = false;
+									this._id = -1;
+									//var evt = {user: this.username.toString()};
+									//io.emit('bye',evt);
+									//chat.buffer.push({m: 'bye', e: evt});
+									for(var i = 0;i < teams.length;i++){
+										if(teams[i].logged)return false;
+									};
+									newSave();
+								}else{
+									console.log("A user disconnected.  Reason: "+err);
+								};
+								//console.log();
+							});
+							
+							this.on('action',function(msg){//object with array of droids ids and targets coordinates i,x,y + target id {d:[],i: Int}
+								for(var i = 0;i < msg.d.length;i++){
+									var d = droids[msg.d[i].i];
+									if(d && (d.team == this._id)){//valid team?
+										if(!d.moving){
+											moving.push(d);
+											d.moving = true;
+										};
+										d.path = pathTo(d.x,d.y,msg.d[i].x,msg.d[i].y);
+										d.targetX = msg.d[i].x;
+										d.targetY = msg.d[i].y;
+										d.target = msg.i;
+									}else if(d){
+										console.log("Invalid team: found: ",d.team,", expected ",this._id);
+									};
+								};
+							});
+							
+							this.on('cmd',function(cmd){
+								var arr = cmd.split(" ");
+								if(this._id == 0){//verify op
+									switch(arr[0]){
+										case "remap":{
+											var map = new Map(100,100);
+											m = map.map;
+											for(var i = 0;i < teams.length;i++){
+												if(teams[i].logged){
+													teams[i].logged = false;
+												};
+											};
+											io.emit("err",{msg: "Kicked"});
+											chat.send({id: -1, msg: "Server map restart.", type: "server"});
+											//newSave();
+										};break;
+										case "close":{
+											
+										};break;
+									};
+								};
+								switch(arr[0]){
+									case "msg":{
+										var name = arr[1];
+										for(var i = 0;i < teams.length;i++){
+											if(teams[i].u == name){
+												this.emit("msg",{id: teams[i].id, msg: arr.slice(2).join(" "),type: "bprivate"})
+												return teams[i].s.emit("msg",{id: this._id, msg: arr.slice(2).join(" "), type: "private"});
+											};
+										};
+										//teams({id: this._id, msg:})
+									};break;
+									case "ping":{
+										this.emit("msg",{id: this._id, msg: "Pong!", type: "console"});
+									};break;
+									case "help":{
+										this.emit("msg",{id: this._id, msg: "Commands: /help, /ping, /msg <player> <message>", type: "console"});
+									};break;
+								};
+							});
+							
+							this.on('msg',function(msg){
+								if(this._id > -1){
+									var evt = {id: this._id, msg: msg, type: "msg"};
+									chat.send(evt);
+								};
+							});
+							
+							if(!teams[i].p)
+							this.on('register',function(set){
+								var pate = /.+@.+\..+/;
+								if(!pate.test(set.e))return this.emit("err",{msg: "Invalid email"});
+								for(var j = 0;j < teams.length;j++){
+									if((teams[j].u == set.u) || ((teams[j].e || "") == set.e)){
+										if(this._id !== j){
+											return this.emit("err",{msg: "Same email or nickname exists"});
+										};
+									};
+								};
+								var dac = teams[this._id];
+								dac.u = set.u;
+								dac.p = set.p;
+								dac.e = set.e;
+								this.emit("err",{msg: "Register_done"});
+							});
+							
+							return true;
+							break;
+						};
 						return false
 					};
 				};

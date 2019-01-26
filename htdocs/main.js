@@ -15,6 +15,10 @@ cv2.width = 32;
 cv2.height = 32;
 var ctx2 = cv2.getContext("2d");
 
+var sfx = [
+	new Audio('laser1.mp3'),
+];
+
 window.onchange = function(){
 	can.width = window.innerWidth;
 	can.height = window.innerHeight;
@@ -49,15 +53,27 @@ var pressed = {
 	d: false,
 	w: false,
 };
+
+function selectAll(){
+	for(var i = 0; i < droids.length; i++){
+		var u = droids[i];
+		if(u !== null && u.team == myTeam){
+			if(selected.indexOf(u.id) == -1)selected.push(u.id);
+		}
+	}
+}
+
 document.body.onkeydown = function(evt){
 	pressed[evt.key] = true;
 	switch(evt.key){
 	case " ":{
 		if(marking){
 			marking = false;
-		}else{
+		}else if(selected.length > 0){
 			selected = [];
 			if(!chatting)evt.preventDefault();
+		}else{
+			selectAll();
 		};
 	};break;
 	case "m":{
@@ -123,15 +139,7 @@ for(var it = 1;it <= droidTypes;it++){
 	dImages[i].b.onload = incl;
 };
 function dDroid(x,y,t,u){
-	var tp1 = u.dir || 0; //old code propably
-	/*var a = u.dmg ? 0.5 : 1;
-	ctx.globalAlpha = a * t.r / (t.cs / 4);
-	ctx.drawImage(dImages[tp1].r,x,y);
-	ctx.globalAlpha = a * t.g / (t.cs / 2);
-	ctx.drawImage(dImages[tp1].g,x,y);
-	ctx.globalAlpha = a * t.b / t.cs;
-	ctx.drawImage(dImages[tp1].b,x,y);
-	ctx.globalAlpha = 1;*/
+	var tp1 = u.dir || 0;
 	ctx.drawImage(teams[u.team].img[tp1],x,y);
 };
 for(var i = 1;i < 5;i++){
@@ -214,6 +222,69 @@ function Team(id,r,g,b){
 	this.dcdec = "rgba("+this.r+","+this.g+","+this.b+",0.5)";
 };
 var teams = [];
+
+function pToDir(x,y){
+	return (y > 0 ? 1 : -1) * Math.atan(x / y);
+};
+
+function drawLaser(x, y, tx, ty, l){
+	ctx.beginPath();
+	ctx.strokeStyle = 'pink';
+	ctx.lineWidth = 5;
+	var ex = 0, ey = 0;
+	var rx = tx - x, ry = ty - y;
+	var lp = (10 - l) * 40;
+	if(l > 5){
+		ctx.moveTo(x - scrollX, y - scrollY);
+		if(d > lp){
+			ctx.lineTo(x + rx * lp / d - scrollX, y + ry * lp / d - scrollY);
+		}else{
+			ctx.lineTo(tx - scrollX, ty - scrollY);
+			for(var i = 0; i < 5; i++){
+				ex += Math.random() * 4 - 2;
+				ey += Math.random() * 4 - 2;
+				ctx.lineTo(tx + ex - scrollX, ty + ey - scrollY);
+			};
+		};
+	}else{
+		var sp = (5 - l) * 40;
+		ctx.moveTo(x + rx * sp / d - scrollX, y + ry * sp / d - scrollY);
+		if(d > lp){
+			ctx.lineTo(x + rx * lp / d - scrollX, y + ry * lp / d - scrollY);
+		}else{
+			ctx.lineTo(tx, ty);
+			for(var i = 0; i < 5; i++){
+				ex += Math.random() * 4 - 2;
+				ey += Math.random() * 4 - 2;
+				ctx.lineTo(tx + ex, ty + ey);
+			};
+		};
+	};
+	stroke();
+	ctx.strokeStyle = 'white';
+	ctx.lineWidth = 3;
+	stroke();
+};
+
+function Entity(x, y, id = 0, lifetime = 10, tx = 0, ty = 0){
+	this.x = x;
+	this.y = y;
+	this.id = id;
+	this.tx = tx;
+	this.ty = ty;
+	this.v = 40;
+	this.lifetime = lifetime;
+	this.draw = function(){
+		switch(this.id){
+			case 1: drawLaser(this.x, this.y, this.tx, this.ty, this.lifetime); break;
+		};
+		if(this.lifetime-- <= 0){
+			delete entities[entities.indexOf(this)];
+			entities = entities.filter((a) => a);
+		};
+	};
+};
+entities = [];
 
 function clearSelect(){
 	oSelected = {};
@@ -381,6 +452,7 @@ function attack(d1,d2){
 		d1.r = 4;
 		d2.hp -= 5;
 		d2.dmg = true;
+		entities.push(new Entity(d1.x * 32, d1.y * 32, 0, 10, d2.x * 32, d2.y * 32));
 		if(d2.hp <= 0){
 			delDroid(d2);
 			d1.target = null;
@@ -476,10 +548,16 @@ function render(map,x,y){
 				};
 				if(isNaN(u.dir))u.dir = dirwgtype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
 				dDroid(px + offsetX,py + offsetY,t,u);
-				u.dmg = false;
+				if(u.dmg){
+					sfx[0].play();
+					u.dmg = false;
+				};
 				if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 			};
 		};
+	};
+	for(var i = 0; i < entities.length; i++){
+		entities[i].draw();
 	};
 	ctx.fillStyle = "grey";
 	ctx.strokeStyle = "lightGrey";
@@ -590,7 +668,7 @@ function render(map,x,y){
 	txt = "";
 	if(selected.length > 0){
 		if(onDroid !== false){
-			if(droids[onDroid].team == myTeam){
+			if(droids[onDroid] && droids[onDroid].team == myTeam){
 				if(selected.indexOf(onDroid) == -1){
 					txt = "Ctrl + click to select.";
 				}else{
@@ -603,7 +681,7 @@ function render(map,x,y){
 			if(marking){
 				txt = "Press space to cancel.";
 			}else{
-				txt = "Control + click and drag to mark an another area of droid selection. Spacebar - deselect all. Click to move units.";
+				txt = "Control + click and drag to mark an another area of droid selection. Spacebar - (de)select all. Click to move units.";
 			};
 		};
 	}else{
@@ -771,10 +849,10 @@ var chat = {
 			el.innerText = evt.msg;
 		}else if(evt.type == "private"){
 			el.className = "chat_private";
-			el.innerText = "From: " + this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
+			el.innerText = "From: " + chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
 		}else if(evt.type == "bprivate"){
 			el.className = "chat_private";
-			el.innerText = "To: " + this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
+			el.innerText = "To: " + chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
 		};
 		msgs.appendChild(el);
 	},
@@ -887,11 +965,7 @@ socket.on("map",function(evt){
 			};
 		})
 		firstLogin = false;
-		socket.on('msg',function(evt){
-			
-			chat.receive(evt);
-			//msgs.innerHTML += "<li><br>"+teams[evt.id].username+": "+evt.msg + "</li>";
-		});
+		socket.on('msg', chat.receive);
 		socket.on('big_msg',function(evt){
 			bigs.push({m: evt, t: 0});
 		});
@@ -907,8 +981,8 @@ function scrol(x,y){
 	if(scrollX % 4 !== 0){
 		scrollX = Math.ceil(scrollX / 4) * 4;
 	};
-	if(scrollY % 4 !== 0){
-		scrollY = Math.ceil(scrollY / 4) * 4;
+	if( (scrollY + 1) % 4 !== 0){
+		scrollY = Math.ceil((scrollY+1) / 4) * 4 - 3;
 	};
 	scrollX += x;
 	scrollY += y;
@@ -921,16 +995,18 @@ var loopFunc = function(){
 	var then = Date.now();
 	
 	if(!chatting){
-		if(pressed.w){
-			if(scrollY > 0)scrol(0,-4);
-		}else if(pressed.s){
-			if(scrollY < mapSizePx - CH)scrol(0,4);
+		var x = 0, y = 0;
+		if(pressed.w || pressed.ArrowUp){
+			if(scrollY > 8)y = -8;
+		}else if(pressed.s || pressed.ArrowDown){
+			if(scrollY < mapSizePx - CH)y = 8;
 		};
-		if(pressed.d){
-			if(scrollX < mapSizePx - CW)scrol(4,0);
-		}else if(pressed.a){
-			if(scrollX > 0)scrol(-4,0);
+		if(pressed.d || pressed.ArrowRight){
+			if(scrollX < mapSizePx - CW)x = 8;
+		}else if(pressed.a || pressed.ArrowLeft){
+			if(scrollX > 0)x = -8;
 		};
+		scrol(x,y);
 		render(m,scrollX,scrollY)
 	};
 	
@@ -953,9 +1029,9 @@ function init(){
 			document.getElementById("username_reg").value = teams[myTeam].u;
 		}else{//in interface
 			var id = Math.ceil((320 - evt.offsetY) / 32);
-			if(pressed.Control){
+			if(pressed.Control){//select only the clicked one
 				selected = [selected[id]];
-			}else if(pressed.Shift){
+			}else if(pressed.Shift){//deselect clicked one
 				selected[id] = null;
 				selected = selected.filter(function(a){if(a !== null)return a});
 			}else{
@@ -1044,7 +1120,7 @@ function init(){
 		my = evt.offsetY + scrollY;
 		var tex = Math.floor(mx / tileSize);
 		var tey = Math.floor(my / tileSize);
-		var u = m[tex][tey].u;
+		var u = m[tex][tey] && m[tex][tey].u;
 		if(u){
 			onDroid = u.id;
 		}else if(droids[selected[0]] && (droids[selected[0]].target !== false)){

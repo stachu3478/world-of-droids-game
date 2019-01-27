@@ -234,6 +234,7 @@ function drawLaser(x, y, tx, ty, l){
 	var ex = 0, ey = 0;
 	var rx = tx - x, ry = ty - y;
 	var lp = (10 - l) * 40;
+	var d = dist(rx, ry);
 	if(l > 5){
 		ctx.moveTo(x - scrollX, y - scrollY);
 		if(d > lp){
@@ -248,22 +249,26 @@ function drawLaser(x, y, tx, ty, l){
 		};
 	}else{
 		var sp = (5 - l) * 40;
-		ctx.moveTo(x + rx * sp / d - scrollX, y + ry * sp / d - scrollY);
+		if(d > sp){
+			ctx.moveTo(x + rx * sp / d - scrollX, y + ry * sp / d - scrollY);
+		}else{
+			ctx.moveTo(tx - scrollX, ty - scrollY);
+		};
 		if(d > lp){
 			ctx.lineTo(x + rx * lp / d - scrollX, y + ry * lp / d - scrollY);
 		}else{
-			ctx.lineTo(tx, ty);
+			ctx.lineTo(tx - scrollX, ty - scrollY);
 			for(var i = 0; i < 5; i++){
 				ex += Math.random() * 4 - 2;
 				ey += Math.random() * 4 - 2;
-				ctx.lineTo(tx + ex, ty + ey);
+				ctx.lineTo(tx + ex - scrollX, ty + ey - scrollY);
 			};
 		};
 	};
-	stroke();
+	ctx.stroke();
 	ctx.strokeStyle = 'white';
 	ctx.lineWidth = 3;
-	stroke();
+	ctx.stroke();
 };
 
 function Entity(x, y, id = 0, lifetime = 10, tx = 0, ty = 0){
@@ -276,7 +281,7 @@ function Entity(x, y, id = 0, lifetime = 10, tx = 0, ty = 0){
 	this.lifetime = lifetime;
 	this.draw = function(){
 		switch(this.id){
-			case 1: drawLaser(this.x, this.y, this.tx, this.ty, this.lifetime); break;
+			case 0: drawLaser(this.x + 16, this.y + 16, this.tx + 16, this.ty + 16, this.lifetime); break;
 		};
 		if(this.lifetime-- <= 0){
 			delete entities[entities.indexOf(this)];
@@ -453,6 +458,7 @@ function attack(d1,d2){
 		d2.hp -= 5;
 		d2.dmg = true;
 		entities.push(new Entity(d1.x * 32, d1.y * 32, 0, 10, d2.x * 32, d2.y * 32));
+		sfx[0].play();
 		if(d2.hp <= 0){
 			delDroid(d2);
 			d1.target = null;
@@ -548,10 +554,10 @@ function render(map,x,y){
 				};
 				if(isNaN(u.dir))u.dir = dirwgtype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
 				dDroid(px + offsetX,py + offsetY,t,u);
-				if(u.dmg){
-					sfx[0].play();
+				//if(u.dmg){
+					//sfx[0].play();
 					u.dmg = false;
-				};
+				//};
 				if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
 			};
 		};

@@ -316,6 +316,12 @@ function prepareTeams(){
 	return toSend;
 };
 
+function killDroids(id){
+	for(var i = 0; i < droids.length;i++){
+		if(droids[i].id == id)delDroid(droids[i]);
+	};
+};
+
 function newSave(){
 	//console.log("Saving data skipped.");
 	//return false;
@@ -475,6 +481,7 @@ function init(){
 								if(this._id > -1){
 									console.log(teams[this._id].u + " disconnected. Reason: "+err);
 									teams[this._id].logged = false;
+									if(teams[this._id].temp)killDroids(this._id);
 									this._id = -1;
 									//var evt = {user: this.username.toString()};
 									//io.emit('bye',evt);
@@ -570,7 +577,9 @@ function init(){
 								dac.u = set.u;
 								dac.p = set.p;
 								dac.e = set.e;
+								dac.temp = false;
 								this.emit("err",{msg: "Register_done"});
+								console.log('Somebody has just registered yay');
 							});
 							
 							return true;

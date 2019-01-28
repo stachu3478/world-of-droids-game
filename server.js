@@ -43,12 +43,12 @@ var inter = setInterval(function(){
 					p.shift();
 					p.shift();
 					//d.moving = true;
-					d.tol = 0;
+					d.tol = Math.floor(Math.random());
 					d.maxOffset = 1;
 					d.dmg = false;
 				};
 			}else{
-				if(d.tol >= 1){
+				if(d.tol >= 2){
 					d.path = pathTo(d.x,d.y,d.targetX,d.targetY);
 					d.tol = Math.round(Math.random() * -2);
 				};
@@ -311,14 +311,14 @@ function prepareTeams(){
 	var toSend = [];
 	for(var i = 0;i < teams.length;i++){
 		var t = teams[i];
-		toSend.push({id: t.id, r: t.r, g: t.g, b: t.b, cdec: t.cdec, dcdec: t.dcdec, logged: t.logged, anihilated: t.anihilated, u: t.u});
+		toSend.push({id: t.id, r: t.r, g: t.g, b: t.b, cdec: t.cdec, dcdec: t.dcdec, logged: t.logged, anihilated: t.anihilated, u: t.u, t: t.temp});
 	};
 	return toSend;
 };
 
 function killDroids(id){
 	for(var i = 0; i < droids.length;i++){
-		if(droids[i].id == id)delDroid(droids[i]);
+		if(droids[i].team == id)delDroid(droids[i]);
 	};
 };
 
@@ -531,6 +531,9 @@ function init(){
 											//newSave();
 										};break;
 										case "close":{
+											process.exit(0);
+										};break;
+										case "kill":{
 											
 										};break;
 									};

@@ -512,6 +512,35 @@ function hpBar(p,x,y){
 		sy -= 2;
 	};
 };
+
+function valiScroll(){
+	if(scrollX < 0)
+		scrollX = 0;
+	else if(scrollX > mapSizePx - CW)
+		scrollX = mapSizePx - CW;
+	
+	if(scrollY < 1)
+		scrollY = 1;
+	else if(scrollY > mapSizePx - CH)
+		scrollY = mapSizePx - CH;
+};
+
+function scrollToDroid(droidId){
+	var d = droids[droidId];
+	scrollX = (d.x * tileSize) - (CW / 2);
+	scrollY = (d.y * tileSize) - (CH / 2);
+	valiScroll();
+};
+
+function scrollToMyDroids(){
+	for(var i = 0;i < droids.length;i++){//scrolls to your army
+		if(droids[i].team == myTeam){
+			scrollToDroid(i);
+			scrolledToMyDroids = true;
+		};
+	};
+};
+
 var mapEnabled = true;
 function render(map,x,y){
 	var oX = x % tileSize;
@@ -565,6 +594,36 @@ function render(map,x,y){
 	for(var i = 0; i < entities.length; i++){
 		entities[i].draw();
 	};
+	var interfacePos = selected.indexOf(onDroid);
+	if(droids[onDroid] !== undefined){
+		var u = droids[onDroid];
+		var usernameLength = ctx.measureText(teams[u.team].u).width;
+		var windowWidth = (usernameLength > 92 ? usernameLength + 40 : 128)
+		var xp = CW - windowWidth;
+		var yp = 0;
+		ctx.strokeRect(xp,yp,windowWidth,64);
+		ctx.fillRect(xp,yp,windowWidth,64);
+		ctx.fillStyle = "black";
+		ctx.fillRect(xp + 44,yp + 4,80,24);
+		ctx.fillStyle = "lime";
+		ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
+		ctx.textAlign = "center";
+		ctx.fillStyle = "white";
+		//ctx.font = "20px Arial";
+		ctx.strokeStyle = "black";
+		ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
+		ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
+		ctx.textAlign = "left";
+		ctx.fillStyle = "black";
+		ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"), xp + 36, yp + 46);
+		ctx.fillText(teams[u.team].u,xp + 36,yp + 60);
+		
+		var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
+		dDroid(xp,yp,t,u);
+		
+		ctx.strokeStyle = "white";//square of droid selected
+		ctx.strokeRect(u.x * tileSize - scrollX, u.y * tileSize - scrollY, 32, 32);
+	};
 	ctx.fillStyle = "grey";
 	ctx.strokeStyle = "lightGrey";
 	ctx.strokeRect(0,0,41,320);
@@ -592,29 +651,6 @@ function render(map,x,y){
 	};
 	ctx.fillStyle = "grey";
 	ctx.strokeStyle = "lightGrey";
-	if(droids[onDroid] !== undefined){
-		var xp = CW - 128;
-		var yp = 0;
-		var u = droids[onDroid];
-		ctx.strokeRect(xp,yp,128,64);
-		ctx.fillRect(xp,yp,128,64);
-		ctx.fillStyle = "black";
-		ctx.fillRect(xp + 44,yp + 4,80,24);
-		ctx.fillStyle = "lime";
-		ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
-		ctx.textAlign = "center";
-		ctx.fillStyle = "white";
-		//ctx.font = "20px Arial";
-		ctx.strokeStyle = "black";
-		ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
-		ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
-		ctx.textAlign = "left";
-		ctx.fillStyle = "black";
-		ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"),xp + 36,yp + 46);
-		ctx.fillText(teams[u.team].u,xp + 36,yp + 60);
-		var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-		dDroid(xp,yp,t,u);
-	};
 	ctx.fillStyle = "green";
 	for(var i = 0;i < selected.length;i++){
 		var u = droids[selected[i]];
@@ -625,6 +661,10 @@ function render(map,x,y){
 			u.dmg = false;
 			ctx.fillRect(32, ypos + 32 - u.hp * 0.64,8,u.hp * 0.64);
 		};
+	};
+	
+	if(interfacePos !== -1){//interface droid frame
+		ctx.strokeRect(0, 320 - interfacePos * 32, 32, 32);
 	};
 	
 	if(mapEnabled){ //map drawing
@@ -673,7 +713,7 @@ function render(map,x,y){
 	ctx.fillText(txt,CW - 1,CH - 1);
 	txt = "";
 	if(selected.length > 0){
-		if(onDroid !== false){
+		if(onDroid !== undefined){
 			if(droids[onDroid] && droids[onDroid].team == myTeam){
 				if(selected.indexOf(onDroid) == -1){
 					txt = "Ctrl + click to select.";
@@ -691,7 +731,7 @@ function render(map,x,y){
 			};
 		};
 	}else{
-		if(onDroid !== false && droids[onDroid].team == myTeam){
+		if(onDroid !== undefined && droids[onDroid].team == myTeam){
 			txt = "Click to select.";
 		}else{
 			if(marking){
@@ -708,7 +748,7 @@ function render(map,x,y){
 	ctx.fillStyle = "white";
 	ctx.fillText(txt,1,CH - 1);
 	
-	if(!teams[myTeam].p){
+	if(teams[myTeam].temp){
 		ctx.font = "16px Consolas";//register button
 		ctx.fillStyle = "rgb(64,64,64)";
 		ctx.fillRect(0,0,75,20);
@@ -842,9 +882,9 @@ var chat = {
 	receive: function(evt){
 		
 		var el = document.createElement("li");
+		var rId = evt.rank ? 0 : 1;
 		if(evt.type == "msg"){
 			
-			var rId = evt.rank ? 0 : 1;
 			el.className = this.cssClasses[rId];
 			el.innerText = this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
 		}else if(evt.type == "server"){
@@ -921,15 +961,7 @@ socket.on("map",function(evt){
 				m[d.x][d.y].u = d;
 				d.dir = dirwgtype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
 			};
-			if(!scrolledToMyDroids)for(var i = 0;i < droids.length;i++){//scrolls to your army
-				var d = droids[i];
-				if(d.team == myTeam){
-					scrollX = (d.x * tileSize) - (CW / 2);
-					scrollY = (d.y * tileSize) - (CH / 2);
-					scrolledToMyDroids = true;
-					break;
-				};
-			};
+			if(!scrolledToMyDroids)scrollToMyDroids();
 			moving = evt.m;
 			if(Math.abs((Date.now() - iStart) % 500) > 50){ //sets tick time offset relative to server one
 				clearInterval(inter);
@@ -1022,13 +1054,13 @@ var loop = 0;
 var menuOn = true;
 function init(){
 	can.onmousedown = function(evt){
-		if((evt.offsetX > 40) || (evt.offsetY > 320)){//out of interface
+		if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
 			smx = evt.offsetX + scrollX;
 			smy = evt.offsetY + scrollY;
 			tmx = Math.floor(smx / tileSize);
 			tmy = Math.floor(smy / tileSize);
 			marking = true;
-		}else if((evt.offsetY < 21) && !myTeam.p){//register button
+		}else if((evt.offsetY < 21) && myTeam.temp){//register button
 			lpanel.hidden = true;
 			rpanel.hidden = false;
 			overlay.hidden = false;
@@ -1042,9 +1074,12 @@ function init(){
 				selected = selected.filter(function(a){if(a !== null)return a});
 			}else{
 				var tmp = selected[id];
-				selected[id] = selected[0];
-				selected[0] = tmp;
-				//console.log("exchange" + id);
+				if(id !== undefined){
+					selected[id] = selected[0];
+					selected[0] = tmp;
+					scrollToDroid(selected[0]);
+					//console.log("exchange" + id);
+				};
 			};
 		};
 	};
@@ -1122,17 +1157,29 @@ function init(){
 		};
 	};
 	can.onmousemove = function(evt){
-		mx = evt.offsetX + scrollX;
-		my = evt.offsetY + scrollY;
-		var tex = Math.floor(mx / tileSize);
-		var tey = Math.floor(my / tileSize);
-		var u = m[tex][tey] && m[tex][tey].u;
-		if(u){
-			onDroid = u.id;
-		}else if(droids[selected[0]] && (droids[selected[0]].target !== false)){
-			onDroid = droids[selected[0]].target;
-		}else onDroid = false;
+		
+		if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
+			mx = evt.offsetX + scrollX;
+			my = evt.offsetY + scrollY;
+			var tex = Math.floor(mx / tileSize);
+			var tey = Math.floor(my / tileSize);
+			var u = m[tex][tey] && m[tex][tey].u;
+			if(u){
+				onDroid = u.id;
+			}else if(droids[selected[0]] && (droids[selected[0]].target !== false)){
+				onDroid = droids[selected[0]].target;
+			}else onDroid = undefined;
+			
+		}else{//in interface
+			var id = Math.ceil((352 - evt.offsetY) / 32) - 1;
+			if(selected[id]){
+				onDroid = selected[id];
+			}else{
+				onDroid = droids[selected[0] || 0].target || undefined;
+			};
+		};
 	};
+	valiScroll();
 	loop = setInterval(loopFunc,30);
 	console.log("loaded");
 	menuOn = false;

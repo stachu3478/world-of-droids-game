@@ -54,6 +54,10 @@ var pressed = {
 	w: false,
 };
 
+function f(v){ // internet explorer why
+	return v
+};
+
 function selectAll(){
 	for(var i = 0; i < droids.length; i++){
 		var u = droids[i];
@@ -156,6 +160,7 @@ var smy = 0;
 var tmx = 0;
 var tmy = 0;
 var marking = false;
+var mapDragging = false;
 var myTeam = -1;
 var selected = [];
 var oSelected = {};
@@ -169,7 +174,7 @@ var tick = function(){
 		var d = moving[i];
 		if(d){
 			var p = d.path;
-			if(p.length == 0){
+			if(p && p.length == 0){
 				delete moving[i];
 				ref = true;
 				d.moving = false;
@@ -271,21 +276,21 @@ function drawLaser(x, y, tx, ty, l){
 	ctx.stroke();
 };
 
-function Entity(x, y, id = 0, lifetime = 10, tx = 0, ty = 0){
+function Entity(x, y, id, lifetime, tx, ty){
 	this.x = x;
 	this.y = y;
-	this.id = id;
-	this.tx = tx;
-	this.ty = ty;
+	this.id = id || 0;
+	this.tx = tx || 0;
+	this.ty = ty || 0;
 	this.v = 40;
-	this.lifetime = lifetime;
+	this.lifetime = lifetime || 10;
 	this.draw = function(){
 		switch(this.id){
 			case 0: drawLaser(this.x + 16, this.y + 16, this.tx + 16, this.ty + 16, this.lifetime); break;
 		};
 		if(this.lifetime-- <= 0){
 			delete entities[entities.indexOf(this)];
-			entities = entities.filter((a) => a);
+			entities = entities.filter(f);
 		};
 	};
 };
@@ -420,7 +425,7 @@ function pathTo(x1,y1,x2,y2){
 		py = miny;
 		path.unshift(minx,miny);
 	};
-	return path;
+	return false;
 };
 
 function delDroid(d){
@@ -527,9 +532,11 @@ function valiScroll(){
 
 function scrollToDroid(droidId){
 	var d = droids[droidId];
-	scrollX = (d.x * tileSize) - (CW / 2);
-	scrollY = (d.y * tileSize) - (CH / 2);
-	valiScroll();
+	if(d){
+		scrollX = (d.x * tileSize) - (CW / 2);
+		scrollY = (d.y * tileSize) - (CH / 2);
+		valiScroll();
+	};
 };
 
 function scrollToMyDroids(){
@@ -542,6 +549,7 @@ function scrollToMyDroids(){
 };
 
 var mapEnabled = true;
+pat1 = {};
 function render(map,x,y){
 	var oX = x % tileSize;
 	var oY = y % tileSize;
@@ -553,12 +561,20 @@ function render(map,x,y){
 	ctx.clearRect(0,0,CW,CH);
 	//ctx.drawImage(tileimg,160,160);
 	//return false;
+	
+	ctx.save(); // draw background pattern
+	moveX = -((scrollX) % imgArray[0].naturalWidth);
+	moveY = -((scrollY) % imgArray[0].naturalHeight);
+	ctx.translate(moveX,moveY);
+	ctx.fillStyle = pat1;
+	ctx.fillRect(0, 0, CW + 32, CH + 32);
+	ctx.restore();
 	for(var i = sX, px = -oX;i <= eX;i++, px += tileSize){ //first loop for backdrop tiles
 		for(var j = sY ,py = -oY;j <= eY;j++ ,py += tileSize){
 			var exists = (i >= 0) && (j >= 0) && (i < 100) && (j < 100);
 			if(exists){
 				var t = map[i][j].t;
-				ctx.drawImage(imgArray[t] || imgArray[2],px,py);
+				if(t > 0)ctx.drawImage(imgArray[t] || imgArray[2],px,py);
 			}else{
 				ctx.drawImage(imgArray[3],px,py);
 			};
@@ -670,8 +686,8 @@ function render(map,x,y){
 	if(mapEnabled){ //map drawing
 		var x = CW - 300;
 		var y = CH - 300;
-		ctx.fillStyle = "rgba(0,0,0,0.5)";
-		ctx.strokeStyle = "rgba(255,255,255,0.5)";
+		ctx.fillStyle = "rgba(0,0,0,0.8)";
+		ctx.strokeStyle = "rgba(255,255,255,0.8)";
 		ctx.strokeRect(x, y, 300, 300);
 		ctx.fillRect(x, y, 300, 300);
 		ctx.fillStyle = "rgba(255,255,255,0.1)";
@@ -731,7 +747,7 @@ function render(map,x,y){
 			};
 		};
 	}else{
-		if(onDroid !== undefined && droids[onDroid].team == myTeam){
+		if(droids[onDroid] && droids[onDroid].team == myTeam){
 			txt = "Click to select.";
 		}else{
 			if(marking){
@@ -812,6 +828,7 @@ var dImagesData = [];
 function preinit(){
 	var map = new Map(100,100); //prepare menu background
 	m = map.map;
+	pat1 = ctx.createPattern(imgArray[0], 'repeat'); // background pattern 3x faster i hope
 	for(var i = 0;i < 10;i++){
 		do{
 			var x = 45 + Math.round(Math.random() * 10);
@@ -823,22 +840,14 @@ function preinit(){
 			};
 		}while(!done);
 	};
-		do{
-			var x = 10 + Math.round(Math.random() * 80);
-			var y = 10 + Math.round(Math.random() * 80);
-			var done = false;
-			if((m[x][y].t == 0) && (m[x][y].u == null)){
-				done = true;
-				droids.push(new Droid(x,y,1));
-			};
-		}while(!done);
 	for(var i = 0;i < dImages.length;i++){//convert images to imageData objects
 		var img = dImages[i].r;
 		ctx.clearRect(0,0,32,32);
 		ctx.drawImage(img,0,0);
 		dImagesData.push(ctx.getImageData(0,0,32,32));
 	};
-	teams = [{img: [prerenderTile(dImagesData[0],Math.random() * 255, Math.random() * 255,Math.random() * 255)]}];
+	myTeam = 0;
+	teams = [{img: [prerenderTile(dImagesData[0],Math.random() * 255, Math.random() * 255,Math.random() * 255)], temp: false}];
 	render(m,scrollX,scrollY);//draw that background
 };
 function red(str){//just span with red color
@@ -1016,16 +1025,12 @@ socket.on("map",function(evt){
 });
 
 function scrol(x,y){
-	if(scrollX % 4 !== 0){
-		scrollX = Math.ceil(scrollX / 4) * 4;
-	};
-	if( (scrollY + 1) % 4 !== 0){
-		scrollY = Math.ceil((scrollY+1) / 4) * 4 - 3;
-	};
+	var v1 = scrollX, v2 = scrollY;
 	scrollX += x;
 	scrollY += y;
-	mx += x;
-	my += y;
+	valiScroll();
+	mx += scrollX - v1;
+	my += scrollY - v2;
 };
 var mapSizePx = 100 * tileSize;
 var loopFunc = function(){
@@ -1054,7 +1059,12 @@ var loop = 0;
 var menuOn = true;
 function init(){
 	can.onmousedown = function(evt){
-		if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
+		if((evt.offsetX > CW - 300) && (evt.offsetY > CH - 300)){ // clicks on map
+			scrollX = (evt.offsetX - CW + 300) * tileSize / 3 - CW / 2;
+			scrollY = (evt.offsetY - CH + 300) * tileSize / 3 - CH / 2;
+			valiScroll();
+			mapDragging = true;
+		}else if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
 			smx = evt.offsetX + scrollX;
 			smy = evt.offsetY + scrollY;
 			tmx = Math.floor(smx / tileSize);
@@ -1074,7 +1084,7 @@ function init(){
 				selected = selected.filter(function(a){if(a !== null)return a});
 			}else{
 				var tmp = selected[id];
-				if(id !== undefined){
+				if(typeof selected[id] == 'number' ){
 					selected[id] = selected[0];
 					selected[0] = tmp;
 					scrollToDroid(selected[0]);
@@ -1155,6 +1165,7 @@ function init(){
 			};
 		marking = false;
 		};
+		mapDragging = false;
 	};
 	can.onmousemove = function(evt){
 		
@@ -1178,10 +1189,15 @@ function init(){
 				onDroid = droids[selected[0] || 0].target || undefined;
 			};
 		};
+		
+		if(mapDragging){
+			scrollX = (evt.offsetX - CW + 300) * tileSize / 3 - CW / 2;
+			scrollY = (evt.offsetY - CH + 300) * tileSize / 3 - CH / 2;
+		};
 	};
 	valiScroll();
 	loop = setInterval(loopFunc,30);
-	console.log("loaded");
+	//console.log("loaded");
 	menuOn = false;
 };
 function deinit(){

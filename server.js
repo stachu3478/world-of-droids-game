@@ -22,7 +22,7 @@ var inter = setInterval(function(){
 		var d = moving[i];
 		if(d !== undefined){
 			var p = d.path;
-			if(p.length == 0){
+			if(p && p.length == 0){
 				delete moving[i];
 				ref = true;
 				d.moving = false;
@@ -83,6 +83,11 @@ function Team(id,u,p,r,g,b){
 	this.temp = p == undefined;
 	this.e = "";
 };
+
+function getTeamByUsername(){
+	
+};
+
 var teams = [
 	new Team(0,"admin","admin",255,1,1),
 	new Team(1),
@@ -293,7 +298,7 @@ function pathTo(x1,y1,x2,y2){
 			miny = d4;
 			pm[px][d4] = 127;
 		};
-		if(min == 1){
+		if(min == 1){ // ended finding path
 			if(path.length == 2){
 				return [x2,y2];
 			}else{
@@ -304,7 +309,7 @@ function pathTo(x1,y1,x2,y2){
 		py = miny;
 		path.unshift(minx,miny);
 	};
-	return path;
+	return false;
 };
 
 function prepareTeams(){

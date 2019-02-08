@@ -7,14 +7,19 @@ var url = require('url');
 var req = require('request');
 const PORT = process.env.PORT || 3000;
 
+var chunks = require('./chunks.js').terrain;
+
 app.use(express.static('htdocs'));
 
-//app.get('/', function(req, res){ //ładuje index.html zamiast domyślnie
-	//console.log(JSON.stringify(req));
- // res.sendFile(__dirname + '/htdocs/' + req.url);
-//});
 var moving = [];
 var cpuLoad = 0;
+
+function resetPath(id){
+	var d = droids[id];
+	d.path = pathTo(d.x,d.y,d.targetX,d.targetY);
+	d.tol = Math.round(Math.random() * -2);
+};
+
 var inter = setInterval(function(){
 	var then = Date.now();
 	var ref = false;
@@ -22,35 +27,59 @@ var inter = setInterval(function(){
 		var d = moving[i];
 		if(d !== undefined){
 			var p = d.path;
+			var block;
 			if(p && p.length == 0){
 				delete moving[i];
 				ref = true;
 				d.moving = false;
 				d.maxOffset = 0;
 				d.dmg = false;
-			}else if(p && (m[p[0]][p[1]].u == null) && (m[p[0]][p[1]].t == 0)){
+			}else if(p && ((block = chunks.getBlock(p[0], p[1])).u == null) && block.i == 0){
 				var target = droids[d.target];
 				if(target && (dist(d.x - target.x,d.y - target.y) <= 5)){
 					attack(d,target);
 					d.maxOffset = 0;
 				}else{
-					m[d.x][d.y].u = null;
+					chunks.setBlockU(d.x, d.y, null)
 					d.lastX = d.x;
 					d.lastY = d.y;
 					d.x = p[0];
 					d.y = p[1];
-					m[d.x][d.y].u = d;
+					chunks.setBlockU(d.x, d.y, d)
 					p.shift();
 					p.shift();
 					//d.moving = true;
 					d.tol = Math.floor(Math.random());
 					d.maxOffset = 1;
 					d.dmg = false;
+					if(movedAlongChunk(d))sendFreshChunks(teams[d.team]);
 				};
 			}else{
 				if(d.tol >= 2){
-					d.path = pathTo(d.x,d.y,d.targetX,d.targetY);
-					d.tol = Math.round(Math.random() * -2);
+					var d2;
+					if(p){
+						var d2 = chunks.getBlock(p[0], p[1]).u;
+						if(d2){
+							var path = pathTo(d.x,d.y,d.targetX,d.targetY);
+							if(!path && Math.random() > 0.9){
+								if(!d2.moving){
+									d2.moving = true;
+									moving.push(d2);
+								};
+								d2.path = d.path;
+								d.path = pathTo(d2.x,d2.y,d2.targetX,d2.targetY);
+								console.log('Paths exchanged')
+							}else{
+								d.path = path;
+								d.tol = Math.round(Math.random() * -2);
+							};
+							//};
+						}else{
+							resetPath(d.id);
+						};
+					}else{
+						resetPath(d.id);
+					};
 				};
 				d.maxOffset = 0;
 				d.dmg = false;
@@ -61,7 +90,14 @@ var inter = setInterval(function(){
 		};
 	};
 	if(ref)moving = moving.filter(function(a){if(a && (a.hp > 0))return a});
-	io.emit("d",{r: droids, m: moving, d: deleted, load: cpuLoad});
+	if(attacks.length > 0){
+		io.emit("attacks", attacks);
+		attacks = [];
+	}
+	for(var i = 0; i < teams.length; i++){
+		if(teams[i].logged)
+			teams[i].s.emit("d",{r: getDroidsSeenByTeam(teams[i]), m: moving, d: deleted, load: cpuLoad});
+	}
 	deleted = [];
 	cpuLoad = (Date.now() - then) / 5;
 },500);
@@ -84,24 +120,19 @@ function Team(id,u,p,r,g,b){
 	this.e = "";
 };
 
-function getTeamByUsername(){
-	
+function getTeamByUsername(name){
+	for(var i = 0; i < teams.length; i++){
+		if(teams[i].name == name)
+			return teams[i];
+	}
 };
 
 var teams = [
 	new Team(0,"admin","admin",255,1,1),
 	new Team(1),
 ];
-var map = [];
-function Map(x,y){
-	this.map = new Array(x);
-	for(var i = 0;i < x;i++){
-		this.map[i] = new Array(y);
-		for(var j = 0;j < y;j++){
-			this.map[i][j] = {t: Math.random() > 0.0625 ? 0 : 1,u: null};
-		};
-	};
-};
+var map = chunks.data.chunks;
+var m = chunks.data.chunks;
 var droids = [];
 function Droid(x,y,team){
 	this.x = x;
@@ -124,7 +155,7 @@ function Droid(x,y,team){
 	this.id = droids.length;
 	this.type = 0;
 	//this.wcd = 0;//walking cooldown
-	m[x][y].u = this;
+	chunks.setBlockU(x, y, this);
 };
 
 var deleted = [];
@@ -134,7 +165,7 @@ function delDroid(d){
 		for(var i = 0;i < moving.length;i++){
 			if(moving[i] == d)delete moving[i];
 		};
-		deleted.push(d.id);
+		deleted.push({i: d.id, x: d.x, y: d.y});
 		var t = d.team;
 		var anihilated = true;
 		droids[d.id] = null;
@@ -147,7 +178,7 @@ function delDroid(d){
 			}else if(d2.target > d.id)d2.target--;
 			if(anihilated && (d2.team == t))anihilated = false;
 		};
-		m[d.x][d.y].u = null;
+		chunks.setBlockU(d.x, d.y, null)
 		if(anihilated){
 			if(teams[t].logged && teams[t].s){
 				teams[t].s.emit("err",{msg: "Your army was destroyed!"});
@@ -158,7 +189,9 @@ function delDroid(d){
 			io.emit("big_msg",teams[t].u + " was annihilated.");
 		};
 	};
-};
+}
+
+var attacks = [];
 function attack(d1,d2){
 	if(d1.r == 0){
 		if(d2.hp <= 0){
@@ -169,6 +202,7 @@ function attack(d1,d2){
 		d1.r = 4;
 		d2.hp -= 5;
 		d2.dmg = true;
+		attacks.push(d1.id, d2.id);
 		if(d2.hp <= 0){
 			delDroid(d2);
 			d1.target = false;
@@ -188,12 +222,12 @@ function attack(d1,d2){
 
 function dist(x12,y12){
 	return Math.sqrt(x12 * x12 + y12 * y12);
-};
+}
 function pathTo(x1,y1,x2,y2){
-	if(m[x2][y2].t == 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2)return [x2,y2];
-	var pm = new Array(100);
+	if(chunks.getBlock(x2, y2).i == 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2)return [x2,y2];
+	var pm = new Array(128);
 	for(var i = 0;i < 100;i++){
-		pm[i] = new Int8Array(100);
+		pm[i] = new Int8Array(128);
 		//for(var j = 0;j < y;j++){
 		//	pm[i][j] = 0;
 		//};
@@ -215,7 +249,8 @@ function pathTo(x1,y1,x2,y2){
 			var c2 = d2 >= 0 && d2 < 100;
 			var c3 = d3 >= 0 && d3 < 100;
 			var c4 = d4 >= 0 && d4 < 100;
-			if(c1 && m[d1][y].t == 0 && m[d1][y].u == null && pm[d1][y] == 0){
+			var b1 = chunks.getBlock(d1, y);
+			if(c1 && b1 && b1.i == 0 && b1.u == null && pm[d1][y] == 0){
 				if(d1 == x2 && y == y2){
 					done = true;
 					break;
@@ -225,7 +260,8 @@ function pathTo(x1,y1,x2,y2){
 					failed = false;
 				};
 			};
-			if(c2 && m[d2][y].t == 0 && m[d2][y].u == null && pm[d2][y] == 0){
+			var b2 = chunks.getBlock(d2, y);
+			if(c2 && b2 && b2.i == 0 && b2.u == null && pm[d2][y] == 0){
 				if(d2 == x2 && y == y2){
 					done = true;
 					break;
@@ -235,7 +271,8 @@ function pathTo(x1,y1,x2,y2){
 					failed = false;
 				};
 			};
-			if(c3 && m[x][d3].t == 0 && m[x][d3].u == null && pm[x][d3] == 0){
+			var b3 = chunks.getBlock(x, d3);
+			if(c3 && b3 && b3.i == 0 && b3.u == null && pm[x][d3] == 0){
 				if(x == x2 && d3 == y2){
 					done = true;
 					break;
@@ -245,7 +282,8 @@ function pathTo(x1,y1,x2,y2){
 					failed = false;
 				};
 			};
-			if(c4 && m[x][d4].t == 0 && m[x][d4].u == null && pm[x][d4] == 0){
+			var b4 = chunks.getBlock(x, d4);
+			if(c4 && b4 && b4.i == 0 && b4.u == null && pm[x][d4] == 0){
 				if(x == x2 && d4 == y2){
 					done = true;
 					break;
@@ -310,7 +348,11 @@ function pathTo(x1,y1,x2,y2){
 		path.unshift(minx,miny);
 	};
 	return false;
-};
+}
+
+function movedAlongChunk(droid){
+	return chunks.getChunk(droid.x, droid.y) !== chunks.getChunk(droid.lastX, droid.lastY);
+}
 
 function prepareTeams(){
 	var toSend = [];
@@ -322,28 +364,44 @@ function prepareTeams(){
 };
 
 function killDroids(id){
-	for(var i = 0; i < droids.length;i++){
+	for(var i = droids.length - 1; i > 0;i--){
 		if(droids[i].team == id)delDroid(droids[i]);
 	};
 };
 
-function newSave(){
-	//console.log("Saving data skipped.");
-	//return false;
-	console.log("Saving data...");
-	var strBin = "";
-	for(var i = 0;i < m.length;i++){
-		for(var j = 0;j < m[i].length;j++){
-			strBin += m[i][j].t ? "1" : "0";
-		};
+function from32ToBin(mapStr){
+	var strBin = '';
+	for(var i = 0;i < mapStr.length;i++){
+		var part = parseInt(mapStr[i],32).toString(2)
+		strBin += "0".repeat(5 - part.length) + parseInt(mapStr[i],32).toString(2);
 	};
-	//console.log("Binary length: "+strBin.length);
+	return strBin;
+}
+
+function fromBinTo32(strBin){
 	var dataCompressed = "";
 	for(var i = 0;i < strBin.length;i+=5){
 		var bins = strBin.slice(i,i + 5);
 		dataCompressed += parseInt(bins,2).toString(32);
 	};
-	//console.log("Compressed data length: "+dataCompressed.length);
+	return dataCompressed;
+}
+
+function newSave(){
+	//console.log("Saving data skipped.");
+	//return false;
+	console.log("Saving data...");
+	var encodedChunks = {};
+	for(var i = 0;i < m.length;i++){
+		var chunk = m[i];
+		var strBin = "";
+		for(var x = 0;x < chunk.length;x++){
+			for(var y = 0;y < chunk[x].length;y++){
+				strBin += chunk[x][y].i ? "1" : "0";
+			};
+		};
+		encodedChunks[i] = fromBinTo32(strBin);
+	};
 	var tmp = [];
 	for(var i = 0;i < teams.length;i++){
 		var d = teams[i];
@@ -351,7 +409,7 @@ function newSave(){
 		delete teams[i].s;
 	};
 	var data = {
-		map: dataCompressed,
+		map: encodedChunks,
 		droids: droids,
 		teams: teams,
 	};
@@ -391,23 +449,27 @@ function newLoad(){
 			setTimeout(function(){newSave()},30000);
 		}else{
 			var data = JSON.parse(body);
-			map = new Map(100,100);
-			m = map.map;
-			var strBin = "";
+			chunks.init();
+			m = map;
 			var mapStr = data.map;
-			//console.log("Map size: "+mapStr.length);
-			for(var i = 0;i < mapStr.length;i++){
-				var part = parseInt(mapStr[i],32).toString(2)
-				strBin += "0".repeat(5 - part.length) + parseInt(mapStr[i],32).toString(2);
-			};
-			var it = 0;
-			//console.log("Binary size: "+strBin.length);
-			for(var i = 0;i < m.length;i++){
-				for(var j = 0;j < m[i].length;j++){
-					m[i][j].t = parseInt(strBin[it]);
-					it++;
-				};
-			};
+			if(typeof data.map == 'string'){ // old map type
+				console.log("Got old map data. Making a new one.");
+				setTimeout(function(){newSave()},30000);
+			}else{
+				for(var i in mapStr){
+					var rawChunk = mapStr[i];
+					var chunkData = from32ToBin(rawChunk.data);
+					chunks.data.chunks[i] = [];
+					var chunk = chunk.data.chunks[i];
+					var n = 0;
+					for(var x = 0; x < 32; x++){
+						chunk[x] = [];
+						for(var y = 0; y < 32; y++){
+							chunk[x][y] = {i: parseInt(chunkData[n++])};
+						}
+					}
+				}
+			}
 			moving = [];
 			droids = data.droids.filter(function(a){if(a.hp){return a}else{m[a.x][a.y].u = null}});
 			teams = data.teams;
@@ -416,7 +478,7 @@ function newLoad(){
 			};
 			for(var i = 0;i < droids.length;i++){
 				var d = droids[i];
-				m[d.x][d.y].u = d;
+				chunks.setBlockU(d.x, d.y, d)
 				if(d.moving){
 					moving.push(d);
 				};
@@ -441,7 +503,61 @@ var chat = {
 	},
 };
 
-var m = [];
+function getChunksOfTeam(objTeam, compObj = {}){
+	var chunkz = {};
+	var team = objTeam.id;
+	for(var i = 0; i < droids.length; i++){
+		var d = droids[i];
+		if(d.team == team){
+			for(var x = -32; x <= 32; x += 32) {
+				for (var y = -32; y <= 32; y += 32) {
+					var chunkId = chunks.getChunk(d.x + x, d.y + y)
+					if (!(chunkId in chunkz) && !(chunkId in compObj))
+						chunkz[chunkId] = true;
+				}
+			}
+		}
+	};
+	return chunkz
+}
+
+function getDroidsSeenByTeam(objTeam){
+	var chunksTeam = getChunksOfTeam(objTeam);
+	var seenDroids = [];
+	for(var i = 0; i < droids.length; i++){
+		var d = droids[i];
+		var chunkId = chunks.getChunk(d.x, d.y);
+		if(chunkId in chunksTeam)
+			seenDroids.push(d)
+	}
+	return seenDroids;
+}
+
+function getFreshChunks(objTeam){
+	var toSend = getChunksOfTeam(objTeam, objTeam.sentChunks);
+	for(var chunk in toSend){
+		if(!chunks.data.chunks[chunk]) {
+			var r = chunk.split(',');
+			chunks.genChunk(r[0],r[1]);
+		}
+		toSend[chunk] = {};
+		toSend[chunk].t = chunks.data.chunks[chunk].t.map(function (x) {
+			for (var i = 0; i < x.length; i++) {
+				delete x[i].u;
+			}
+			;
+			return x;
+		})
+		toSend[chunk].g = true;
+		toSend[chunk].c = false;
+	}
+	return toSend;
+}
+
+function sendFreshChunks(objTeam){
+	if(objTeam.logged)objTeam.s.emit('chunks', getFreshChunks(objTeam));
+};
+
 function init(){
 	
 	newLoad();
@@ -463,6 +579,7 @@ function init(){
 							this._id = i;
 							teams[i].logged = true;
 							teams[i].s = this;
+							teams[i].sentChunks = {};
 							if(teams[i].anihilated){//make new army while destroyed
 								var rx = 5 + Math.round(Math.random() * 90);
 								var ry = 5 + Math.round(Math.random() * 90);
@@ -471,7 +588,8 @@ function init(){
 										var x = rx + Math.round(Math.random() * 10);
 										var y = ry + Math.round(Math.random() * 10);
 										var done = false;
-										if((x < 100) && (y < 100) && (x >= 0) && (y >= 0) && (m[x][y].t == 0) && (m[x][y].u == null)){
+										var block = chunks.getBlock(x, y);
+										if((x < 100) && (y < 100) && (x >= 0) && (y >= 0) && (block.i == 0) && (block.u == null)){
 											done = true;
 											droids.push(new Droid(x,y,i));
 										};
@@ -480,7 +598,7 @@ function init(){
 								teams[i].anihilated = false;
 							};
 							console.log(teams[i].u + " logged in, id: " + this._id);
-							this.emit("map",{m: m,t: prepareTeams(),i: i,c: chat.buffer});
+							this.emit("map",{m: getFreshChunks(teams[i]),t: prepareTeams(),i: i,c: chat.buffer});
 							
 							this.on('disconnect',function(err){
 								if(this._id > -1){
@@ -524,8 +642,8 @@ function init(){
 								if(this._id == 0){//verify op
 									switch(arr[0]){
 										case "remap":{
-											var map = new Map(100,100);
-											m = map.map;
+											chunks.init();
+											m = map;
 											for(var i = 0;i < teams.length;i++){
 												if(teams[i].logged){
 													teams[i].logged = false;
@@ -536,11 +654,20 @@ function init(){
 											//newSave();
 										};break;
 										case "close":{
+											io.emit("err",{msg: "Server closed."});
 											process.exit(0);
 										};break;
-										case "kill":{
-											
+										case "kick":{
+											var team = getTeamByUsername(arr[1]);
+											if(team && team.logged)
+												team.s.emit("err",{msg: "Kicked"});
 										};break;
+										case "help":{
+											this.emit("msg",{id: this._id, msg: "Admin commands: /remap /close /kick <player>", type: "console"});
+										};break;
+										case "console":{
+											this.emit("msg",{id: this._id, msg: eval(arr.slice(1).join(" ")), type: "console"});
+										}
 									};
 								};
 								switch(arr[0]){

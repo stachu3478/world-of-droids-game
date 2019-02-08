@@ -1,5 +1,3 @@
-var can = document.getElementById("c");
-var chate = document.getElementById("chat");
 var msgs = document.getElementById("msgs");
 var input = document.getElementById("chat_input");
 var overlay = document.getElementById("overlay");
@@ -17,14 +15,15 @@ var ctx2 = cv2.getContext("2d");
 
 var sfx = [
 	new Audio('laser1.mp3'),
+	new Audio('explode1.mp3'),
 ];
 
-window.onchange = function(){
+window.onresize = function(){
 	can.width = window.innerWidth;
 	can.height = window.innerHeight;
 	CW = can.width;
-	CH = can.height;
-	if(menuOn)render(m,scrollX,scrollY);
+	CH = can.height
+	render(m,scrollX,scrollY, menu.hidden);
 };
 var chatting = false;
 input.onfocus = function(){
@@ -44,7 +43,6 @@ input.onkeypress = function(evt){
 		input.value = "";
 	};
 };
-var ctx = can.getContext("2d");
 var tileSize = 32;
 
 var pressed = {
@@ -59,9 +57,9 @@ function f(v){ // internet explorer why
 };
 
 function selectAll(){
-	for(var i = 0; i < droids.length; i++){
+	for(var i in droids){
 		var u = droids[i];
-		if(u !== null && u.team == myTeam){
+		if(u && u.team == myTeam){
 			if(selected.indexOf(u.id) == -1)selected.push(u.id);
 		}
 	}
@@ -70,7 +68,7 @@ function selectAll(){
 document.body.onkeydown = function(evt){
 	pressed[evt.key] = true;
 	switch(evt.key){
-	case " ":{
+	case " ": case "Spacebar":{
 		if(marking){
 			marking = false;
 		}else if(selected.length > 0){
@@ -83,10 +81,39 @@ document.body.onkeydown = function(evt){
 	case "m":{
 		mapEnabled = !mapEnabled;
 	};break;
+		case 'Up':{
+			pressed.ArrowUp = true;
+		};break;
+		case 'Down':{
+			pressed.ArrowDown = true;
+		};break;
+		case 'Left':{
+			pressed.ArrowLeft = true;
+		};break;
+		case 'Right':{
+			pressed.ArrowRight = true;
+		};break;
 	}
 };
 document.body.onkeyup = function(evt){
 	pressed[evt.key] = false;
+	switch(evt.key){
+		case "Spacebar":{
+			pressed[' '] = false;
+		};break;
+		case "Up":{
+			pressed.ArrowUp = false;
+		};break;
+		case "Down":{
+			pressed.ArrowDown = false;
+		};break;
+		case 'Left':{
+			pressed.ArrowLeft = false;
+		};break;
+		case 'Right':{
+			pressed.ArrowRight = false;
+		};break;
+	}
 };
 
 function checkp(){
@@ -110,15 +137,7 @@ function backReg(){
 	overlay.hidden = true;
 };
 
-const droidTypes = 4;
-loading = 0;
-function incl(){
-	if(++loading == 16){
-		preinit();
-	};
-};
-
-var dirwgtype = {
+var dirsbytype = {
 	
 	"0,-1": 0,
 	"0,1": 2,
@@ -126,39 +145,10 @@ var dirwgtype = {
 	"-1,0": 3,
 	"NaN,NaN": 0,
 };
-var imgArray = [];
-var dImages = [];
-for(var it = 1;it <= droidTypes;it++){
-	dImages.push({
-	r: new Image(),
-	g: new Image(),
-	b: new Image(),
-	});
-	var i = it - 1;
-	dImages[i].r.src = "tiles/d" + it + "r.png";
-	dImages[i].r.onload = incl;
-	dImages[i].g.src = "tiles/d" + it + "g.png";
-	dImages[i].g.onload = incl;
-	dImages[i].b.src = "tiles/d" + it + "b.png";
-	dImages[i].b.onload = incl;
-};
-function dDroid(x,y,t,u){
-	var tp1 = u.dir || 0;
-	ctx.drawImage(teams[u.team].img[tp1],x,y);
-};
-for(var i = 1;i < 5;i++){
-	var img = new Image();
-	img.src = "tiles/" + i + ".bmp";
-	img.onload = incl;
-	imgArray.push(img);
-};
 
-var mx = 0;
-var my = 0;
-var smx = 0;
-var smy = 0;
-var tmx = 0;
-var tmy = 0;
+var mx = 0, my = 0;
+var smx = 0, smy = 0;
+var tmx = 0, tmy = 0;
 var marking = false;
 var mapDragging = false;
 var myTeam = -1;
@@ -174,107 +164,40 @@ var tick = function(){
 		var d = moving[i];
 		if(d){
 			var p = d.path;
+			var block;
+			if(p)block = map.getBlock(p[0], p[1]);
 			if(p && p.length == 0){
 				delete moving[i];
 				ref = true;
 				d.moving = false;
-			}else if(p && (m[p[0]][p[1]].u == null)){
+			}else if(p && block && block.u){
 				var target = droids[d.target];
 				if(target && (dist(d.x - target.x,d.y - target.y) <= 5)){
 					attack(d,target);
 				}else{
-					m[d.x][d.y].u = null;
-					d.dir = dirwgtype[(p[0] - d.x) + "," + (p[1] - d.y)] || 3;
+					map.setBlockU(d.x, d.y, null);
+					d.dir = dirsbytype[(p[0] - d.x) + "," + (p[1] - d.y)] || 3;
 					d.lastX = d.x;
 					d.lastY = d.y;
 					d.x = p[0];
 					d.y = p[1];
-					m[d.x][d.y].u = d;
+					map.setBlockU(d.x, d.y, d);
 					p.shift();
 					p.shift();
 					d.moving = true;
 					d.tol = 0;
 					d.maxOffset = 1;
 				}
-			}else{
-				//if(d.tol >= 1){
-				//	d.path = pathTo(d.x,d.y,d.targetX,d.targetY);
-				//	d.tol = Math.round(Math.random() * -2);
-				//};
-				//d.tol++;
 			};
 		}else{
 			ref = true;
 		};
 	};
 	if(ref)moving = moving.filter(function(a){if(a && (a.hp > 0))return a});
-	if(window.innerHeight !== can.height || window.innerWidth !== can.width){
-		can.width = window.innerWidth;
-		can.height = window.innerHeight;
-		CW = can.width;
-		CH = can.height;
-		if(menuOn)render(m,scrollX,scrollY);
-	};
 };
 var inter = setInterval(tick,500);
 var iStart = Date.now();
-function Team(id,r,g,b){
-	this.id = id;
-	this.r = r || Math.floor(Math.random() * 255);
-	this.g = g || Math.floor(Math.random() * 255);
-	this.b = b || Math.floor(Math.random() * 255);
-	this.cdec = "rgb("+this.r+","+this.g+","+this.b+")";
-	this.dcdec = "rgba("+this.r+","+this.g+","+this.b+",0.5)";
-};
 var teams = [];
-
-function pToDir(x,y){
-	return (y > 0 ? 1 : -1) * Math.atan(x / y);
-};
-
-function drawLaser(x, y, tx, ty, l){
-	ctx.beginPath();
-	ctx.strokeStyle = 'pink';
-	ctx.lineWidth = 5;
-	var ex = 0, ey = 0;
-	var rx = tx - x, ry = ty - y;
-	var lp = (10 - l) * 40;
-	var d = dist(rx, ry);
-	if(l > 5){
-		ctx.moveTo(x - scrollX, y - scrollY);
-		if(d > lp){
-			ctx.lineTo(x + rx * lp / d - scrollX, y + ry * lp / d - scrollY);
-		}else{
-			ctx.lineTo(tx - scrollX, ty - scrollY);
-			for(var i = 0; i < 5; i++){
-				ex += Math.random() * 4 - 2;
-				ey += Math.random() * 4 - 2;
-				ctx.lineTo(tx + ex - scrollX, ty + ey - scrollY);
-			};
-		};
-	}else{
-		var sp = (5 - l) * 40;
-		if(d > sp){
-			ctx.moveTo(x + rx * sp / d - scrollX, y + ry * sp / d - scrollY);
-		}else{
-			ctx.moveTo(tx - scrollX, ty - scrollY);
-		};
-		if(d > lp){
-			ctx.lineTo(x + rx * lp / d - scrollX, y + ry * lp / d - scrollY);
-		}else{
-			ctx.lineTo(tx - scrollX, ty - scrollY);
-			for(var i = 0; i < 5; i++){
-				ex += Math.random() * 4 - 2;
-				ey += Math.random() * 4 - 2;
-				ctx.lineTo(tx + ex - scrollX, ty + ey - scrollY);
-			};
-		};
-	};
-	ctx.stroke();
-	ctx.strokeStyle = 'white';
-	ctx.lineWidth = 3;
-	ctx.stroke();
-};
 
 function Entity(x, y, id, lifetime, tx, ty){
 	this.x = x;
@@ -284,16 +207,8 @@ function Entity(x, y, id, lifetime, tx, ty){
 	this.ty = ty || 0;
 	this.v = 40;
 	this.lifetime = lifetime || 10;
-	this.draw = function(){
-		switch(this.id){
-			case 0: drawLaser(this.x + 16, this.y + 16, this.tx + 16, this.ty + 16, this.lifetime); break;
-		};
-		if(this.lifetime-- <= 0){
-			delete entities[entities.indexOf(this)];
-			entities = entities.filter(f);
-		};
-	};
 };
+Entity.prototype.draw = tiles.drawEntity;
 entities = [];
 
 function clearSelect(){
@@ -301,155 +216,9 @@ function clearSelect(){
 	selected = [];
 };
 
-function dist(x12,y12){
-	return Math.sqrt(x12 * x12 + y12 * y12);
-};
-
-function pathTo(x1,y1,x2,y2){
-	if(m[x2][y2].t == 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2)return [x2,y2];
-	var pm = new Array(100);
-	for(var i = 0;i < 100;i++){
-		pm[i] = new Int8Array(100);
-		//for(var j = 0;j < y;j++){
-		//	pm[i][j] = 0;
-		//};
-	};
-	var done = false;
-	var arr = [x1,y1];
-	pm[x1][y1] = 1;
-	for(var step = 2;(step < 100) && (done == false);step++){
-		var arr1 = [];
-		var failed = true;
-		for(var i = 0;i < arr.length;i += 2){
-			var x = arr[i];
-			var y = arr[i + 1];
-			var d1 = x + 1;
-			var d2 = x - 1;
-			var d3 = y + 1;
-			var d4 = y - 1;
-			var c1 = d1 >= 0 && d1 < 100;
-			var c2 = d2 >= 0 && d2 < 100;
-			var c3 = d3 >= 0 && d3 < 100;
-			var c4 = d4 >= 0 && d4 < 100;
-			if(c1 && m[d1][y].t == 0 && m[d1][y].u == null && pm[d1][y] == 0){
-				if(d1 == x2 && y == y2){
-					done = true;
-					break;
-				}else{
-					arr1.push(d1,y);
-					pm[d1][y] = step;
-					failed = false;
-				};
-			};
-			if(c2 && m[d2][y].t == 0 && m[d2][y].u == null && pm[d2][y] == 0){
-				if(d2 == x2 && y == y2){
-					done = true;
-					break;
-				}else{
-					arr1.push(d2,y);
-					pm[d2][y] = step;
-					failed = false;
-				};
-			};
-			if(c3 && m[x][d3].t == 0 && m[x][d3].u == null && pm[x][d3] == 0){
-				if(x == x2 && d3 == y2){
-					done = true;
-					break;
-				}else{
-					arr1.push(x,d3);
-					pm[x][d3] = step;
-					failed = false;
-				};
-			};
-			if(c4 && m[x][d4].t == 0 && m[x][d4].u == null && pm[x][d4] == 0){
-				if(x == x2 && d4 == y2){
-					done = true;
-					break;
-				}else{
-					arr1.push(x,d4);
-					pm[x][d4] = step;
-					failed = false;
-				};
-			};
-		};
-		arr = arr1;
-		if(failed)return false;
-	};
-	var px = x2;
-	var py = y2;
-	var path = [x2,y2];
-	for(var l = 0;l < 101;l++){
-		var d1 = px + 1;
-		var d2 = px - 1;
-		var d3 = py + 1;
-		var d4 = py - 1;
-		var c1 = d1 >= 0 && d1 < 100;
-		var c2 = d2 >= 0 && d2 < 100;
-		var c3 = d3 >= 0 && d3 < 100;
-		var c4 = d4 >= 0 && d4 < 100;
-		var min = 101;
-		var minx = px;
-		var miny = py;
-		if(c1 && (pm[d1][py] !== 0) && (pm[d1][py] < min)){
-			min = pm[d1][py] + 0;
-			minx = d1;
-			miny = py;
-			pm[d1][py] = 127;
-		};
-		if(c2 && (pm[d2][py] !== 0) && (pm[d2][py] < min)){
-			min = pm[d2][py] + 0;
-			minx = d2;
-			miny = py;
-			pm[d2][py] = 127;
-		};
-		if(c3 && (pm[px][d3] !== 0) && (pm[px][d3] < min)){
-			min = pm[px][d3] + 0;
-			minx = px;
-			miny = d3;
-			pm[px][d3] = 127;
-		};
-		if(c4 && (pm[px][d4] !== 0) && (pm[px][d4] < min)){
-			min = pm[px][d4] + 0;
-			minx = px;
-			miny = d4;
-			pm[px][d4] = 127;
-		};
-		if(min == 1){
-			if(path.length == 2){
-				return [x2,y2];
-			}else{
-				return path;
-			};
-		};
-		px = minx;
-		py = miny;
-		path.unshift(minx,miny);
-	};
-	return false;
-};
-
-function delDroid(d){
-	if(d){
-		if(d.moving)
-		for(var i = 0;i < moving.length;i++){
-			if(moving[i] == d)delete moving[i];
-		};
-		for(var i = 0;i < droids.length;i++){
-			var d2 = droids[i];
-			if(d2.id > d.id)d2.id--;
-			if(d2.target == d.id){
-				d2.target = false;
-			}else if(d2.target > d.id)d2.target--;
-		};
-		m[d.x][d.y].u = null;
-		droids[d.id] = null;
-		droids = droids.filter(function(a){return a}); //add hp condition if possible
-	};
-};
 function attack(d1,d2){
 	if(d1.r == 0){
 		if(d2.hp <= 0){
-			delDroid(d2);
 			d1.target = null;
 			return false;
 		}else if(!d2.target && !d2.moving){
@@ -462,10 +231,7 @@ function attack(d1,d2){
 		d1.r = 4;
 		d2.hp -= 5;
 		d2.dmg = true;
-		entities.push(new Entity(d1.x * 32, d1.y * 32, 0, 10, d2.x * 32, d2.y * 32));
-		sfx[0].play();
 		if(d2.hp <= 0){
-			delDroid(d2);
 			d1.target = null;
 			return true;
 		};
@@ -476,47 +242,6 @@ function attack(d1,d2){
 
 var scrollX = tileSize * 50 - CW / 2;
 var scrollY = tileSize * 50 - CH / 2;
-var bCols = ["",
-	"rgb(255,0,0)",
-	"rgb(224,32,0)",
-	"rgb(192,64,0)",
-	"rgb(160,96,0)",
-	"rgb(128,128,0)",
-	"rgb(96,160,32)",
-	"rgb(64,192,64)",
-	"rgb(32,224,96)",
-];
-function prerenderTile(img,r,g,b){
-	var imgData = ctx.createImageData(32,32);
-	var dat = img.data;
-	for(var i = 0;i < imgData.data.length;i += 4){
-		var base = (dat[i + 1] + dat[i + 2]) / 2;
-		var m = dat[i] - base; //color strength xd
-		imgData.data[i] = base + Math.round((m / 255) * r);
-		imgData.data[i + 1] = base + Math.round((m / 255) * g);
-		imgData.data[i + 2] = base + Math.round((m / 255) * b);
-		imgData.data[i + 3] = Math.round(img.data[i + 3]);
-	};
-	ctx2.clearRect(0,0,32,32);
-	ctx2.putImageData(imgData,0,0);
-	var img2 = new Image();
-	img2.src = cv2.toDataURL("image/png");
-	return img2;
-};
-function hpBar(p,x,y){
-	var sx = x + 30;
-	var sy = y + 29;
-	var loops = Math.ceil(p / 12.5) + 1;
-	for(var i = 1;i < loops;i++){
-		ctx.strokeStyle = bCols[i];
-		ctx.beginPath();
-		ctx.moveTo(sx - i,sy);
-		ctx.lineTo(sx,sy);
-		ctx.stroke();
-		//ctx.strokeRect(sx - i,sy,i,0);
-		sy -= 2;
-	};
-};
 
 function valiScroll(){
 	if(scrollX < 0)
@@ -540,7 +265,7 @@ function scrollToDroid(droidId){
 };
 
 function scrollToMyDroids(){
-	for(var i = 0;i < droids.length;i++){//scrolls to your army
+	for(var i in droids){//scrolls to your army
 		if(droids[i].team == myTeam){
 			scrollToDroid(i);
 			scrolledToMyDroids = true;
@@ -549,248 +274,26 @@ function scrollToMyDroids(){
 };
 
 var mapEnabled = true;
-pat1 = {};
-function render(map,x,y){
-	var oX = x % tileSize;
-	var oY = y % tileSize;
-	var sX = Math.floor(x / tileSize);
-	var sY = Math.floor(y / tileSize);
-	var eX = sX + Math.ceil(CW / tileSize);
-	var eY = sY + Math.ceil(CH / tileSize);
-	var now = Date.now();
+function render(map,x,y,g){
 	ctx.clearRect(0,0,CW,CH);
-	//ctx.drawImage(tileimg,160,160);
-	//return false;
-	
-	ctx.save(); // draw background pattern
-	moveX = -((scrollX) % imgArray[0].naturalWidth);
-	moveY = -((scrollY) % imgArray[0].naturalHeight);
-	ctx.translate(moveX,moveY);
-	ctx.fillStyle = pat1;
-	ctx.fillRect(0, 0, CW + 32, CH + 32);
-	ctx.restore();
-	for(var i = sX, px = -oX;i <= eX;i++, px += tileSize){ //first loop for backdrop tiles
-		for(var j = sY ,py = -oY;j <= eY;j++ ,py += tileSize){
-			var exists = (i >= 0) && (j >= 0) && (i < 100) && (j < 100);
-			if(exists){
-				var t = map[i][j].t;
-				if(t > 0)ctx.drawImage(imgArray[t] || imgArray[2],px,py);
-			}else{
-				ctx.drawImage(imgArray[3],px,py);
-			};
-		};
-	};
-	for(var i = 0;i < droids.length;i++){//second one for droids
-		var u = droids[i];
-		if(u !== null){
-			var px = u.x * tileSize - scrollX;
-			var py = u.y * tileSize - scrollY;
-			if((px > -32) && (px < (CW + 32)) && (py > -32) && (py < (CH + 32))){
-				var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-				var offsetX = 0;
-				var offsetY = 0;
-				if(u.moving){
-					var stamp = 1 - (((now - iStart) % 500) / 500);
-					if(stamp < u.maxOffset){
-						offsetX += (u.lastX - u.x) * stamp * tileSize;
-						offsetY += (u.lastY - u.y) * stamp * tileSize;
-						u.maxOffset = stamp;
-					};
-				};
-				if(isNaN(u.dir))u.dir = dirwgtype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
-				dDroid(px + offsetX,py + offsetY,t,u);
-				//if(u.dmg){
-					//sfx[0].play();
-					u.dmg = false;
-				//};
-				if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
-			};
-		};
-	};
+
+	tiles.drawTileMap(map, x, y, g);
+	tiles.drawUnits();
+
 	for(var i = 0; i < entities.length; i++){
 		entities[i].draw();
 	};
-	var interfacePos = selected.indexOf(onDroid);
-	if(droids[onDroid] !== undefined){
-		var u = droids[onDroid];
-		var usernameLength = ctx.measureText(teams[u.team].u).width;
-		var windowWidth = (usernameLength > 92 ? usernameLength + 40 : 128)
-		var xp = CW - windowWidth;
-		var yp = 0;
-		ctx.strokeRect(xp,yp,windowWidth,64);
-		ctx.fillRect(xp,yp,windowWidth,64);
-		ctx.fillStyle = "black";
-		ctx.fillRect(xp + 44,yp + 4,80,24);
-		ctx.fillStyle = "lime";
-		ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
-		ctx.textAlign = "center";
-		ctx.fillStyle = "white";
-		//ctx.font = "20px Arial";
-		ctx.strokeStyle = "black";
-		ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
-		ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
-		ctx.textAlign = "left";
-		ctx.fillStyle = "black";
-		ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"), xp + 36, yp + 46);
-		ctx.fillText(teams[u.team].u,xp + 36,yp + 60);
-		
-		var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-		dDroid(xp,yp,t,u);
-		
-		ctx.strokeStyle = "white";//square of droid selected
-		ctx.strokeRect(u.x * tileSize - scrollX, u.y * tileSize - scrollY, 32, 32);
-	};
-	ctx.fillStyle = "grey";
-	ctx.strokeStyle = "lightGrey";
-	ctx.strokeRect(0,0,41,320);
-	ctx.fillRect(0,0,40,325);
-	if(droids[selected[0]] !== undefined){
-		var xp = 0;
-		var yp = 320;
-		var u = droids[selected[0]];
-		ctx.strokeRect(xp,yp,128,64);
-		ctx.fillRect(xp,yp,128,64);
-		ctx.fillStyle = "black";
-		ctx.fillRect(xp + 44,yp + 4,80,24);
-		ctx.fillStyle = "lime";
-		ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
-		ctx.textAlign = "center";
-		ctx.fillStyle = "white";
-		//ctx.font = "20px Arial";
-		ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
-		ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
-		ctx.textAlign = "left";
-		ctx.fillStyle = "black";
-		ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"),xp + 36,yp + 58);
-	}else{
-		ctx.strokeRect(0,324,40,1);
-	};
-	ctx.fillStyle = "grey";
-	ctx.strokeStyle = "lightGrey";
-	ctx.fillStyle = "green";
-	for(var i = 0;i < selected.length;i++){
-		var u = droids[selected[i]];
-		if(u !== null && u !== undefined){
-			var ypos = 320 - i * 32;
-			var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-			dDroid(0,ypos,t,u);
-			u.dmg = false;
-			ctx.fillRect(32, ypos + 32 - u.hp * 0.64,8,u.hp * 0.64);
-		};
-	};
-	
-	if(interfacePos !== -1){//interface droid frame
-		ctx.strokeRect(0, 320 - interfacePos * 32, 32, 32);
-	};
-	
-	if(mapEnabled){ //map drawing
-		var x = CW - 300;
-		var y = CH - 300;
-		ctx.fillStyle = "rgba(0,0,0,0.8)";
-		ctx.strokeStyle = "rgba(255,255,255,0.8)";
-		ctx.strokeRect(x, y, 300, 300);
-		ctx.fillRect(x, y, 300, 300);
-		ctx.fillStyle = "rgba(255,255,255,0.1)";
-		ctx.strokeRect(x + 3 * (scrollX / tileSize), y + 3 * (scrollY / tileSize), 3 * CW / tileSize, 3 * CH / tileSize);
-		ctx.fillRect(x + 3 * (scrollX / tileSize), y + 3 * (scrollY / tileSize), 3 * CW / tileSize, 3 * CH / tileSize);
-		for(var i = 0;i < droids.length;i++){
-			var u = droids[i];
-			if(u !== null){
-				var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
-				ctx.fillStyle = t.dcdec || "grey";
-				ctx.fillRect(x + u.x * 3,y + u.y * 3,3,3);
-			};
-		};
-	};
-	
-	var txt = "";
-	var tex = Math.floor(mx / tileSize);
-	var tey = Math.floor(my / tileSize);
-	if(marking){
-		txt = "X: " + tmx + " - " + tex + ", Y: " + tmy + " - " + tey;
-		ctx.strokeStyle = "lime";
-		ctx.fillStyle = "rgba(0,128,0,0.3)";
-		var sx = Math.min(smx,mx) - scrollX;
-		var sy = Math.min(smy,my) - scrollY;
-		var width = Math.abs(smx - mx); 
-		var height = Math.abs(smy - my); 
-		ctx.fillRect(sx,sy,width,height);
-		ctx.strokeRect(sx,sy,width,height);
-	}else{
-		txt = "X: " + tex + ", Y: " + tey;
-	};
-	txt += " " + serverLoad + " % / " + clientLoad + " %";
-	ctx.fillStyle = "black";
-	ctx.font = "12px Consolas";
-	var len = ctx.measureText(txt).width + 2;
-	ctx.textAlign = "right";
-	ctx.fillRect(CW - len,CH - 14,len,14);
-	ctx.fillStyle = "white";
-	ctx.fillText(txt,CW - 1,CH - 1);
-	txt = "";
-	if(selected.length > 0){
-		if(onDroid !== undefined){
-			if(droids[onDroid] && droids[onDroid].team == myTeam){
-				if(selected.indexOf(onDroid) == -1){
-					txt = "Ctrl + click to select.";
-				}else{
-					txt = "Shift + click to deselect.";
-				};
-			}else{
-				txt = "Click to attack.";
-			};
-		}else{
-			if(marking){
-				txt = "Press space to cancel.";
-			}else{
-				txt = "Control + click and drag to mark an another area of droid selection. Spacebar - (de)select all. Click to move units.";
-			};
-		};
-	}else{
-		if(droids[onDroid] && droids[onDroid].team == myTeam){
-			txt = "Click to select.";
-		}else{
-			if(marking){
-				txt = "Press space to cancel.";
-			}else{
-				txt = "Click and drag to mark an area of droid selection.";
-			};
-		};
-	};
-	ctx.fillStyle = "black";
-	var len = ctx.measureText(txt).width + 2;
-	ctx.textAlign = "left";
-	ctx.fillRect(0,CH - 14,len,14);
-	ctx.fillStyle = "white";
-	ctx.fillText(txt,1,CH - 1);
-	
-	if(teams[myTeam].temp){
+
+	interface.draw();
+
+	/*if(teams[myTeam].temp){
 		ctx.font = "16px Consolas";//register button
 		ctx.fillStyle = "rgb(64,64,64)";
 		ctx.fillRect(0,0,75,20);
 		ctx.strokeRect(0,0,75,20);
 		ctx.fillStyle = "white";
 		ctx.fillText("Register",0,10);
-	};
-	
-	var big = bigs[0];
-	if(big){//render big notification
-		ctx.globalAlpha = 0;
-		if(big.t < 30){
-			ctx.globalAlpha = big.t / 30;
-		}else if(big.t < 150){
-			ctx.globalAlpha = 1;
-		}else if(big.t < 180){
-			ctx.globalAlpha = (30 - big.t) / 30;
-		}else{
-			bigs.shift();
-		};
-		big.t++;
-		ctx.textAlign = "center";
-		ctx.fillText(big.m,CW / 2,CH / 4);
-		ctx.strokeText(big.m,CW / 2,CH / 4);
-		ctx.globalAlpha = 1;
-	};
+	};*/
 };
 function Droid(x,y,team){
 	this.x = x;
@@ -812,43 +315,31 @@ function Droid(x,y,team){
 	this.dmg = false;
 	this.dir = 0,
 	//this.wcd = 0;//walking cooldown
-	m[x][y].u = this;
+	map.setBlockU(this.x, this.y, this);
 };
-function Map(x,y){
-	this.map = new Array(x);
-	for(var i = 0;i < x;i++){
-		this.map[i] = new Array(y);
-		for(var j = 0;j < y;j++){
-			this.map[i][j] = {t: Math.random() > 0.0625 ? 0 : 1,u: null};
-		};
-	};
+function Map(){
+	map.init();
 };
 
-var dImagesData = [];
 function preinit(){
-	var map = new Map(100,100); //prepare menu background
-	m = map.map;
-	pat1 = ctx.createPattern(imgArray[0], 'repeat'); // background pattern 3x faster i hope
+	can.width++;
+	can.width--;
+	Map();
 	for(var i = 0;i < 10;i++){
 		do{
 			var x = 45 + Math.round(Math.random() * 10);
 			var y = 45 + Math.round(Math.random() * 10);
 			var done = false;
-			if((m[x][y].t == 0) && (m[x][y].u == null)){
+			var block = map.getBlock(x, y, true);
+			if((block.i == 0) && (block.u == null)){
 				done = true;
 				droids.push(new Droid(x,y,0));
 			};
 		}while(!done);
 	};
-	for(var i = 0;i < dImages.length;i++){//convert images to imageData objects
-		var img = dImages[i].r;
-		ctx.clearRect(0,0,32,32);
-		ctx.drawImage(img,0,0);
-		dImagesData.push(ctx.getImageData(0,0,32,32));
-	};
 	myTeam = 0;
-	teams = [{img: [prerenderTile(dImagesData[0],Math.random() * 255, Math.random() * 255,Math.random() * 255)], temp: false}];
-	render(m,scrollX,scrollY);//draw that background
+	teams = [{img: tiles.prepareDroidTiles(Math.random() * 255, Math.random() * 255,Math.random() * 255), temp: false}];
+	render(map,scrollX,scrollY, true);//draw that background
 };
 function red(str){//just span with red color
 	var el = document.createElement("span");
@@ -894,8 +385,8 @@ var chat = {
 		var rId = evt.rank ? 0 : 1;
 		if(evt.type == "msg"){
 			
-			el.className = this.cssClasses[rId];
-			el.innerText = this.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
+			el.className = chat.cssClasses[rId];
+			el.innerText = chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
 		}else if(evt.type == "server"){
 			el.className = "chat_server";
 			el.innerText = "[SERVER] " + evt.msg;
@@ -930,9 +421,9 @@ socket.on("err",function(err){
 	switch(err.msg){
 		case "Temporary account created": {tryLogin();out.innerText = "Logging in..."};break;
 		case "Password needed": {pe.hidden = false;out.innerText = "Type password"};break;
-		case "Wrong password": {out.innerText = red("Wrong password or login.")};break;
+		case "Wrong password": {out.innerHTML = red("Wrong password or login.")};break;
 		case "Your army was destroyed!": {menu.hidden = false;deinit();out.innerText = "Your army has been destroyed!"};break;
-		case "Kicked": {menu.hidden = false;deinit();out.innerText = "You were kicked from the server."};break;
+		case "Kicked": {menu.hidden = false;deinit();out.innerHTML = red("You were kicked from the server.")};break;
 		case "Invalid email": {out2.innerText = "Invalid e-mail"};break;
 		case "Same email or nickname exists": {out2.innerText = "Same email or nickname exists"};break;
 		case "Register_done": {out2.innerText = "You have been registered.";backReg()};break;
@@ -944,15 +435,12 @@ socket.on("disconnect",function(evt){
 	deinit();
 });
 socket.on("map",function(evt){
-	m = evt.m;
+	map.data.chunks = evt.m;
 	teams = evt.t;
 	for(var i = 0;i < teams.length;i++){
 		var t = teams[i];
 		t.cs = t.r + t.g + t.b;
-		t.img = [];
-		for(var j = 0;j < dImagesData.length;j++){
-			t.img.push(prerenderTile(dImagesData[j],t.r,t.g,t.b));
-		};
+		t.img = tiles.prepareDroidTiles(t.r, t.g, t.b);
 	};
 	for(var i = 0;i < evt.c.length;i++){
 		chat.receive(evt.c[i]);
@@ -960,15 +448,16 @@ socket.on("map",function(evt){
 	myTeam = evt.i;
 	if(firstLogin){
 		socket.on("d",function(evt){
-			for(var i = 0;i < droids.length;i++){
+			for(var i in droids){
 				var d = droids[i];
-				m[d.x][d.y].u = null;
+				map.setBlockU(d.x, d.y, null);
 			};
-			droids = evt.r;
+			droids = [];;
 			for(var i = 0;i < evt.r.length;i++){
 				var d = evt.r[i];
-				m[d.x][d.y].u = d;
-				d.dir = dirwgtype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
+				map.setBlockU(d.x, d.y, d);
+				d.dir = dirsbytype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
+				droids[d.id] = d;
 			};
 			if(!scrolledToMyDroids)scrollToMyDroids();
 			moving = evt.m;
@@ -976,12 +465,11 @@ socket.on("map",function(evt){
 				clearInterval(inter);
 				inter = setInterval(tick,500);
 				iStart = Date.now();
-				//console.log("Equalizing server tick.");
 			};
 			var dl = evt.d;
 			var ref = false;
 			for(var i = 0;i < dl.length;i++){
-				var id = dl[i];
+				var id = dl[i].i;
 				for(var j = 0;j < selected.length;j++){
 					var d = droids[selected[j]];
 					if(selected[j] !== undefined){
@@ -995,6 +483,8 @@ socket.on("map",function(evt){
 						ref = true;
 					};
 				};
+				entities.push(new Entity(dl[i].x * 32, dl[i].y * 32, 1, 7));
+				sfx[1].play();
 			};
 			if(ref)selected = selected.filter(function(a){return a});
 			serverLoad = Math.round(evt.load);
@@ -1005,19 +495,32 @@ socket.on("map",function(evt){
 			for(var i = 0;i < teams.length;i++){
 				var t = teams[i];
 				t.cs = t.r + t.g + t.b;
-				t.img = [];
-				for(var j = 0;j < dImagesData.length;j++){
-					t.img.push(prerenderTile(dImagesData[j],t.r,t.g,t.b));
-				};
+				t.img = tiles.prepareDroidTiles(t.r, t.g, t.b);
 			};
 		})
 		firstLogin = false;
-		socket.on('msg', chat.receive);
+		socket.on('msg', function(evt){chat.receive(evt)});
 		socket.on('big_msg',function(evt){
 			bigs.push({m: evt, t: 0});
 		});
 		socket.on('register_done',function(){
 			backReg();
+		});
+
+		socket.on('chunks',function(chunks){
+			for(var id in chunks){
+				map.data.chunks[id] = chunks[id];
+			}
+		});
+
+		socket.on('attacks', function(attacks){
+			for(var i = 0; i < attacks.length; i++){
+				var d1 = droids[attacks[i]], d2 = droids[attacks[i + 1]];
+				if(d1 && d2){
+					entities.push(new Entity(d1.x * 32, d1.y * 32, 0, 10, d2.x * 32, d2.y * 32));
+					sfx[0].play();
+				}
+			}
 		});
 	};
 	init();
@@ -1050,7 +553,7 @@ var loopFunc = function(){
 			if(scrollX > 0)x = -8;
 		};
 		scrol(x,y);
-		render(m,scrollX,scrollY)
+		render(map,scrollX,scrollY)
 	};
 	
 	clientLoad = Math.round((Date.now() - then) / 0.3);
@@ -1060,8 +563,8 @@ var menuOn = true;
 function init(){
 	can.onmousedown = function(evt){
 		if((evt.offsetX > CW - 300) && (evt.offsetY > CH - 300)){ // clicks on map
-			scrollX = (evt.offsetX - CW + 300) * tileSize / 3 - CW / 2;
-			scrollY = (evt.offsetY - CH + 300) * tileSize / 3 - CH / 2;
+			scrollX = Math.round((evt.offsetX - CW + 300) * tileSize / 3 - CW / 2);
+			scrollY = Math.round((evt.offsetY - CH + 300) * tileSize / 3 - CH / 2);
 			valiScroll();
 			mapDragging = true;
 		}else if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
@@ -1070,11 +573,6 @@ function init(){
 			tmx = Math.floor(smx / tileSize);
 			tmy = Math.floor(smy / tileSize);
 			marking = true;
-		}else if((evt.offsetY < 21) && myTeam.temp){//register button
-			lpanel.hidden = true;
-			rpanel.hidden = false;
-			overlay.hidden = false;
-			document.getElementById("username_reg").value = teams[myTeam].u;
 		}else{//in interface
 			var id = Math.ceil((320 - evt.offsetY) / 32);
 			if(pressed.Control){//select only the clicked one
@@ -1088,10 +586,11 @@ function init(){
 					selected[id] = selected[0];
 					selected[0] = tmp;
 					scrollToDroid(selected[0]);
-					//console.log("exchange" + id);
 				};
 			};
 		};
+
+		interface.processButtons(evt.offsetX, evt.offsetY, true);
 	};
 	can.onmouseup = function(evt){
 		if(marking){
@@ -1099,10 +598,11 @@ function init(){
 			var emy = evt.offsetY + scrollY;
 			var tex = Math.floor(emx / tileSize);
 			var tey = Math.floor(emy / tileSize);
-			if(m[tex] && m[tex][tey])
+			var block = map.getBlock(tex, tey);
+			if(block)
 			if(tmx == tex && tmy == tey){
-				var u = m[tmx][tmy].u;
-				if((u !== null) && (u.team == myTeam)){
+				var u = block.u;
+				if(u && (u.team == myTeam)){
 					if(pressed.Shift && selected.indexOf(u.id) !== -1){
 						var id = selected.indexOf(u.id);
 						selected[id] = null;
@@ -1110,12 +610,10 @@ function init(){
 					}else{
 						if(!pressed.Control)clearSelect();
 						if(selected.indexOf(u.id) == -1)selected.push(u.id);
-						//oSelected[u.id] = true;
 					};
 				}else{
-					//find path and :>>>
 					var arr = [];
-					var attack = u !== null;
+					var attack = u && (u.id !== undefined);
 					var dir = 0;
 					var w1 = 0;
 					var w2 = 0.5;
@@ -1132,17 +630,19 @@ function init(){
 							d.targetX = tmx;
 							d.targetY = tmy;
 							if(attack)d.target = u.id;
-						do{
-						w1++;
-						tmx += dArrx[dir];
-						tmy += dArry[dir];
-						if(w1 >= w2){
-							w1 = 0;
-							w2 += 0.5;
-							dir = (dir + 1) % 4;
-						};
-						}while(!(m[tmx]) || !(m[tmx][tmy]) || (m[tmx][tmy].t == 1) || (m[tmx][tmy].u !== null));
-						arr.push({i: d.id, x: d.targetX, y: d.targetY});
+
+							do{
+								w1++;
+								tmx += dArrx[dir];
+								tmy += dArry[dir];
+								if(w1 >= w2){
+									w1 = 0;
+									w2 += 0.5;
+									dir = (dir + 1) % 4;
+								};
+								block = map.getBlock(tmx, tmy);
+							}while(!block || (block.i == 1) || (block.u));
+							arr.push({i: d.id, x: d.targetX, y: d.targetY});
 						};
 					};
 					socket.emit("action",{d: arr, i: attack ? u.id : false});
@@ -1155,10 +655,9 @@ function init(){
 				if(!pressed.Control)clearSelect();
 				for(var i = sx;i <= ex;i++){
 					for(var j = sy;j <= ey;j++){
-						var u = m[i][j].u;
-						if(u !== null && u.team == myTeam){
+						var u = map.getBlock(i, j).u;
+						if(u && u.team == myTeam){
 							if(selected.indexOf(u.id) == -1)selected.push(u.id);
-							//oSelected[u.id] = true;
 						}
 					}
 				}
@@ -1169,12 +668,14 @@ function init(){
 	};
 	can.onmousemove = function(evt){
 		
+		if(!evt)return false;
 		if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
 			mx = evt.offsetX + scrollX;
 			my = evt.offsetY + scrollY;
 			var tex = Math.floor(mx / tileSize);
 			var tey = Math.floor(my / tileSize);
-			var u = m[tex][tey] && m[tex][tey].u;
+			var block = map.getBlock(tex, tey);
+			var u = block && block.u;
 			if(u){
 				onDroid = u.id;
 			}else if(droids[selected[0]] && (droids[selected[0]].target !== false)){
@@ -1186,18 +687,30 @@ function init(){
 			if(selected[id]){
 				onDroid = selected[id];
 			}else{
-				onDroid = droids[selected[0] || 0].target || undefined;
+				onDroid = droids[selected[0]] && droids[selected[0]].target || undefined;
 			};
 		};
 		
 		if(mapDragging){
-			scrollX = (evt.offsetX - CW + 300) * tileSize / 3 - CW / 2;
-			scrollY = (evt.offsetY - CH + 300) * tileSize / 3 - CH / 2;
+			scrollX = Math.round((evt.offsetX - CW + 300) * tileSize / 3 - CW / 2);
+			scrollY = Math.round((evt.offsetY - CH + 300) * tileSize / 3 - CH / 2);
 		};
-	};
+
+		interface.processButtons(evt.offsetX, evt.offsetY, false);
+	}
+
+	if(teams[myTeam].t) {
+		var registerButton = new interface.createCanvasButton(0, 0, 75, 20, 'Register');
+		registerButton.onclick = function() {
+			lpanel.hidden = true;
+			rpanel.hidden = false;
+			overlay.hidden = false;
+			document.getElementById("username_reg").value = teams[myTeam].u;
+		}
+	}
+
 	valiScroll();
 	loop = setInterval(loopFunc,30);
-	//console.log("loaded");
 	menuOn = false;
 };
 function deinit(){
@@ -1207,5 +720,5 @@ function deinit(){
 	can.onmousemove = null;
 	clearInterval(loop);
 	menuOn = true;
+	interface.removeButton('Register');
 };
-//init();

@@ -10,6 +10,7 @@ window.interface = new function(){
             var xp = CW - windowWidth;
             var yp = 0;
             ctx.strokeRect(xp,yp,windowWidth,64);
+            ctx.fillStyle = "#000B";
             ctx.fillRect(xp,yp,windowWidth,64);
             ctx.fillStyle = "black";
             ctx.fillRect(xp + 44,yp + 4,80,24);
@@ -22,7 +23,7 @@ window.interface = new function(){
             ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
             ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
             ctx.textAlign = "left";
-            ctx.fillStyle = "black";
+            ctx.fillStyle = "white";
             ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"), xp + 36, yp + 46);
             ctx.fillText(teams[u.team].u,xp + 36,yp + 60);
 

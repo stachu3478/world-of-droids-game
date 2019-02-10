@@ -78,7 +78,7 @@ module.exports = class Misc {
                 arr = arr1;
                 if (failed) {return false;}
             }
-            if(done)return false;
+            if(!done)return false;
             var px = x2;
             var py = y2;
             var path = [x2, y2];

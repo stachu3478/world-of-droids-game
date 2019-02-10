@@ -35,13 +35,13 @@ exports.terrain = {
             c = this.setChunk(x,y);
         }else{
             c = this.data.chunks[idx];
-        };
+        }
         c.g = true;
         for(var i = 0; i < chunkSize; i++){
             for(var j = 0; j < chunkSize; j++){
                 c.t[i][j] = {i: Math.random() > 0.0625 ? 0 : 1}
-            };
-        };
+            }
+        }
         c.g = true;
         return c;
     },

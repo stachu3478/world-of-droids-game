@@ -435,7 +435,7 @@ function attack(d1,d2){
 					if(d.team === d2.team && d.free && (d.adv || d.type === 2) && misc.dist(d2.x - d.x, d2.y - d.y) <= 5){
 						sendDroid(d, d1.x, d1.y, [d2.x, d2.y], d1.id);
 					}
-				})
+				});
 				var time = Date.now() - now;
 				console.log('Calling took ' + time + 'ms');
 			}
@@ -596,13 +596,13 @@ function newLoad(){
 			eachDroid((i, d) => {
 				d.x = parseInt(d.x);
 				d.y = parseInt(d.y);
-				moveDroid(d, d.x, d.y);
 				if(d.moving){
 					if(misc.spec[d.type].canMove)
 						moving.push(d);
 					else
 						d.moving = false;
 				}
+				// chunks.setBlockU(d.x, d.y, d);
 				if(teams[d.team].anihilated)teams[d.team].anihilated = false;
 				if(d.type === undefined)d.type = 0;
 				switch(d.type){
@@ -619,6 +619,7 @@ function newLoad(){
 					console.log('fake droid');
 				}
 			});
+			fixDroids();
 			console.log("Map loaded");
 		}
 	});

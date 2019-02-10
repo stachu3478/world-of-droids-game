@@ -211,7 +211,7 @@ var tick = function(){
 	};
 	if(ref)moving = moving.filter(function(a){if(a && (a.hp > 0))return a});
 };
-var inter = setInterval(() => {},500);
+var inter = setInterval(tick,500);
 var iStart = Date.now();
 var teams = [];
 
@@ -302,6 +302,14 @@ function render(map,x,y,g){
 
 	interface.draw();
 
+	/*if(teams[myTeam].temp){
+		ctx.font = "16px Consolas";//register button
+		ctx.fillStyle = "rgb(64,64,64)";
+		ctx.fillRect(0,0,75,20);
+		ctx.strokeRect(0,0,75,20);
+		ctx.fillStyle = "white";
+		ctx.fillText("Register",0,10);
+	};*/
 }
 function Droid(x,y,team,type = 0){
 	this.x = x;
@@ -392,20 +400,20 @@ var chat = {
 		
 		var el = document.createElement("li");
 		var rId = evt.rank ? 0 : 1;
-		if(evt.type === "msg"){
+		if(evt.type == "msg"){
 			
 			el.className = chat.cssClasses[rId];
 			el.innerText = chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
-		}else if(evt.type === "server"){
+		}else if(evt.type == "server"){
 			el.className = "chat_server";
 			el.innerText = "[SERVER] " + evt.msg;
-		}else if(evt.type === "console"){
+		}else if(evt.type == "console"){
 			el.className = "chat_console";
 			el.innerText = evt.msg;
-		}else if(evt.type === "private"){
+		}else if(evt.type == "private"){
 			el.className = "chat_private";
 			el.innerText = "From: " + chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
-		}else if(evt.type === "bprivate"){
+		}else if(evt.type == "bprivate"){
 			el.className = "chat_private";
 			el.innerText = "To: " + chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
 		};
@@ -460,29 +468,42 @@ socket.on("map",function(evt){
 			for(var i in droids){
 				var d = droids[i];
 				map.setBlockU(d.x, d.y, null);
-				delete droids[1];
-			}
+			};
 			droids = [];
 			for(var i = 0;i < evt.r.length;i++){
 				var d = evt.r[i];
 				map.setBlockU(d.x, d.y, d);
 				d.dir = dirsbytype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
 				droids[d.id] = d;
-			}
+			};
 			if(!scrolledToMyDroids)scrollToMyDroids();
 			moving = evt.m;
 			if(Math.abs((Date.now() - iStart) % 500) > 50){ //sets tick time offset relative to server one
 				clearInterval(inter);
 				inter = setInterval(tick,500);
 				iStart = Date.now();
-			}
+			};
 			var dl = evt.d;
+			var ref = false;
 			for(var i = 0;i < dl.length;i++){
 				var id = dl[i].i;
+				for(var j = 0;j < selected.length;j++){
+					var d = droids[selected[j]];
+					if(selected[j] !== undefined){
+						if(selected[j] > id){
+							selected[j]--;
+						}else if(selected[j] == id){
+							delete selected[j];
+							ref = true;
+						}//else if(d && d.target >= id)d.target--; this is performed for server already
+					}else{
+						ref = true;
+					};
+				};
 				entities.push(new Entity(dl[i].x * 32, dl[i].y * 32, 1, 7));
 				sfx[1].play();
-			}
-			if(dl.length > 0)selected = selected.filter((id) => droids[id]);
+			};
+			if(ref)selected = selected.filter(function(a){return a});
 			serverLoad = Math.round(evt.load);
 		});
 		socket.on("teams",function(evt){
@@ -518,11 +539,7 @@ socket.on("map",function(evt){
 				}
 			}
 		});
-
-		socket.on('highScores', function(evt){
-			highScores = evt;
-		});
-	}
+	};
 	init();
 	menu.hidden = true;
 });
@@ -534,7 +551,7 @@ function scrol(x,y){
 	valiScroll();
 	mx += scrollX - v1;
 	my += scrollY - v2;
-}
+};
 var mapSizePx = 100 * tileSize;
 var loopFunc = function(){
 	
@@ -560,7 +577,6 @@ var loopFunc = function(){
 };
 var loop = 0;
 var menuOn = true;
-var highScores = [];
 function init(){
 	can.onmousedown = function(evt){
 		if(interface.processButtons(evt.offsetX, evt.offsetY, true))return;
@@ -614,7 +630,7 @@ function init(){
 								});
 							} else {
 								if (!pressed.Control) clearSelect();
-								if (selected.indexOf(u.id) === -1) selected.push(u.id);
+								if (selected.indexOf(u.id) == -1) selected.push(u.id);
 							}
 							;
 						} else {
@@ -627,12 +643,12 @@ function init(){
 							var dArry = [-1, 0, 1, 0];
 							for (var i = 0; i < selected.length; i++) {
 								var d = droids[selected[i]];
-								if(!spec[d.type].canMove)continue
-								if (d && (d.team === myTeam)) {
+								if (d && (d.team == myTeam)) {
 									if (!d.moving) {
 										moving.push(d);
 										d.moving = true;
 									}
+									;
 									d.path = pathTo(d.x, d.y, tmx, tmy);
 									d.targetX = tmx;
 									d.targetY = tmy;
@@ -647,26 +663,27 @@ function init(){
 											w2 += 0.5;
 											dir = (dir + 1) % 4;
 										}
+										;
 										block = map.getBlock(tmx, tmy);
-									} while (!block || (block.i === 1) || (block.u));
+									} while (!block || (block.i == 1) || (block.u));
 									arr.push({i: d.id, x: d.targetX, y: d.targetY});
 								}
+								;
 							}
+							;
 							socket.emit("action", {d: arr, i: attack ? u.id : false});
-							console.log(arr);
 						}
+						;
 					}break;
 					default:{
 						if(canForm(tex, tey, action)){
-							var data = {
+							socket.emit('transform', {
 								x: tex,
 								y: tey,
 								d: findActorDroid(),
 								type: action,
 								preferredDroids: selected.slice(1),
-							};
-							socket.emit('transform', data);
-							console.log(data);
+							});
 							interface.setAction(0);
 						}
 					}
@@ -681,7 +698,7 @@ function init(){
 					for(var j = sy;j <= ey;j++){
 						var u = map.getBlock(i, j).u;
 						if(u && u.team == myTeam){
-							if(selected.indexOf(u.id) === -1 && u.type !== 3)selected.push(u.id);
+							if(selected.indexOf(u.id) == -1 && u.type !== 3)selected.push(u.id);
 						}
 					}
 				}
@@ -750,5 +767,4 @@ function deinit(){
 	clearInterval(loop);
 	menuOn = true;
 	interface.removeButton('Register');
-	selected = [];
 };

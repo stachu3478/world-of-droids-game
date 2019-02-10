@@ -14,10 +14,10 @@ window.tiles = new function(){
         "rgb(32,224,96)",
     ];
 
-    const droidTypes = 4;
+    const droidTypes = 8;
     loading = 0;
     function incl(){
-        if(++loading == 23){
+        if(++loading === 19){
             init();
             preinit();
         };
@@ -28,7 +28,7 @@ window.tiles = new function(){
     function init(){
         pat1 = ctx.createPattern(imgArray[0], 'repeat'); // background pattern 3x faster i hope
         for(var i = 0;i < dImages.length;i++){//convert images to imageData objects
-            var img = dImages[i].r;
+            var img = dImages[i];
             ctx.clearRect(0,0,32,32);
             ctx.drawImage(img,0,0);
             dImagesData.push(ctx.getImageData(0,0,32,32));
@@ -38,32 +38,35 @@ window.tiles = new function(){
     var imgArray = [];
     var dImages = [];
     for(var it = 1;it <= droidTypes;it++){ // import images
-        dImages.push({
-            r: new Image(),
-            g: new Image(),
-            b: new Image(),
-        });
+        dImages.push(new Image());
         var i = it - 1;
-        dImages[i].r.src = "tiles/d" + it + "r.png";
-        dImages[i].r.onload = incl;
-        dImages[i].g.src = "tiles/d" + it + "g.png";
-        dImages[i].g.onload = incl;
-        dImages[i].b.src = "tiles/d" + it + "b.png";
-        dImages[i].b.onload = incl;
-    };
+        dImages[i].src = "tiles/d" + it + "r.png";
+        dImages[i].onload = incl;
+    }
 
     for(var i = 1;i < 5;i++){
         var img = new Image();
         img.src = "tiles/" + i + ".bmp";
         img.onload = incl;
         imgArray.push(img);
-    };
+    }
 
     for(var i = 1;i < 8;i++){
         var img = new Image();
         img.src = "tiles/explode" + i + ".png";
         img.onload = incl;
         imgArray.push(img);
+    }
+
+    for(var i = 1;i < 8;i++){
+        var img = new Image();
+        img.src = "tiles/button" + i + ".png";
+        img.onload = incl;
+        imgArray.push(img);
+    }
+
+    this.drawImg = function(i, x, y){
+        return ctx.drawImage(imgArray[i], x, y);
     };
 
     function drawLaser(x, y, tx, ty, l){
@@ -112,14 +115,26 @@ window.tiles = new function(){
 
     function dDroid(x,y,t,u){
         var tp1 = u.dir || 0;
+        switch(u.type){
+            case 1: tp1 = 4;break;
+            case 2: tp1 = 5;break;
+            case 3: tp1 = 6;break;
+            case 4: tp1 = 7;break;
+        }
         ctx.drawImage(teams[u.team].img[tp1],x,y);
+        if(u.type === 4){
+            ctx.fillStyle = '#2D2A';
+            ctx.beginPath();
+            ctx.arc(x + 16, y + 16, 12, -Math.PI / 2, (1 - (u.tol / spec[u.type].transformTime)) * Math.PI * 3 / 2, false);
+            ctx.fill();
+        }
     };
     this.dDroid = dDroid;
 
     function hpBar(p,x,y){
         var sx = x + 30;
         var sy = y + 29;
-        var loops = Math.ceil(p / 12.5) + 1;
+        var loops = Math.ceil(p * 8) + 1;
         for(var i = 1;i < loops;i++){
             ctx.strokeStyle = bCols[i];
             ctx.beginPath();
@@ -226,7 +241,7 @@ window.tiles = new function(){
                     //sfx[0].play();
                     u.dmg = false;
                     //};
-                    if(selected.indexOf(u.id) > -1)hpBar(u.hp * 2,px + offsetX,py + offsetY);
+                    if(selected.indexOf(u.id) > -1)hpBar((u.hp / spec[u.type].hp),px + offsetX,py + offsetY);
                 };
             };
         };

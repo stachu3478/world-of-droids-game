@@ -1,6 +1,8 @@
 window.interface = new function(){
 
     var dDroid = tiles.dDroid;
+    var action = 0;
+    var actionAllowed = false;
 
     function drawDroidCard(){
         if(droids[onDroid] !== undefined){
@@ -9,19 +11,20 @@ window.interface = new function(){
             var windowWidth = (usernameLength > 92 ? usernameLength + 40 : 128)
             var xp = CW - windowWidth;
             var yp = 0;
+            var maxHp = spec[u.type].hp;
             ctx.strokeRect(xp,yp,windowWidth,64);
             ctx.fillStyle = "#000B";
             ctx.fillRect(xp,yp,windowWidth,64);
             ctx.fillStyle = "black";
             ctx.fillRect(xp + 44,yp + 4,80,24);
             ctx.fillStyle = "lime";
-            ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
+            ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / maxHp),22);
             ctx.textAlign = "center";
             ctx.fillStyle = "white";
             //ctx.font = "20px Arial";
             ctx.strokeStyle = "black";
-            ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
-            ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
+            ctx.strokeText(u.hp + " / " + maxHp,xp + 84,yp + 21);
+            ctx.fillText(u.hp + " / " + maxHp,xp + 84,yp + 21);
             ctx.textAlign = "left";
             ctx.fillStyle = "white";
             ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"), xp + 36, yp + 46);
@@ -32,30 +35,34 @@ window.interface = new function(){
 
             ctx.strokeStyle = "white";//square of droid selected
             ctx.strokeRect(u.x * tileSize - scrollX, u.y * tileSize - scrollY, 32, 32);
-        };
+        }
     }
 
+    var navsHidden = false;
     function drawSelectedDroidCard(){
         if(droids[selected[0]] !== undefined){
             var xp = 0;
             var yp = 320;
             var u = droids[selected[0]];
+            var maxHp = spec[u.type].hp;
             ctx.strokeRect(xp,yp,128,64);
             ctx.fillRect(xp,yp,128,64);
             ctx.fillStyle = "black";
             ctx.fillRect(xp + 44,yp + 4,80,24);
             ctx.fillStyle = "lime";
-            ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / 50),22);
+            ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / maxHp),22);
             ctx.textAlign = "center";
             ctx.fillStyle = "white";
             //ctx.font = "20px Arial";
-            ctx.strokeText(u.hp + " / " + 50,xp + 84,yp + 21);
-            ctx.fillText(u.hp + " / " + 50,xp + 84,yp + 21);
+            ctx.strokeText(u.hp + " / " + maxHp,xp + 84,yp + 21);
+            ctx.fillText(u.hp + " / " + maxHp,xp + 84,yp + 21);
             ctx.textAlign = "left";
             ctx.fillStyle = "black";
             ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"),xp + 36,yp + 58);
+            if(navsHidden)lookNavs(false);
         }else{
             ctx.strokeRect(0,324,40,1);
+            if(!navsHidden)lookNavs(true);
         };
     }
 
@@ -75,7 +82,8 @@ window.interface = new function(){
                 var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
                 dDroid(0,ypos,t,u);
                 u.dmg = false;
-                ctx.fillRect(32, ypos + 32 - u.hp * 0.64,8,u.hp * 0.64);
+                var maxHp = spec[u.type].hp;
+                ctx.fillRect(32, ypos + 32 - u.hp * 32 / maxHp,8,u.hp * 32 / maxHp);
             };
         };
         var interfacePos = selected.indexOf(onDroid);
@@ -174,6 +182,20 @@ window.interface = new function(){
         ctx.fillText(txt,1,CH - 1);
     }
 
+    function renderHighscores(){
+        ctx.strokeRect(CW - 128, 64, 128, highScores.length * 16);
+        ctx.fillStyle = '#000B';
+        ctx.fillRect(CW - 128, 64, 128, highScores.length * 16);
+        ctx.font = '12px Georgia';
+        ctx.fillStyle = '#FFF';
+        for(var i = 0; i < highScores.length; i++){
+            ctx.textAlign = 'left';
+            ctx.fillText((i + 1) + '. ' + highScores[i].name + ':', CW - 128, 78 + i * 16, 96);
+            ctx.textAlign = 'right';
+            ctx.fillText(highScores[i].score.toString(), CW - 1, 78 + i * 16, 32);
+        }
+    }
+
     function drawBigNotification(){
         var big = bigs[0];
         if(big){//render big notification
@@ -189,6 +211,7 @@ window.interface = new function(){
             };
             big.t++;
             ctx.textAlign = "center";
+            ctx.font = '20px Consolas';
             ctx.fillText(big.m,CW / 2,CH / 4);
             ctx.strokeText(big.m,CW / 2,CH / 4);
             ctx.globalAlpha = 1;
@@ -197,6 +220,7 @@ window.interface = new function(){
 
     this.draw = function(){
         drawDroidCard();
+        renderHighscores();
         drawSelectedDroids();
         drawMap();
         drawMarkingArea();
@@ -215,59 +239,137 @@ window.interface = new function(){
         this.color = color || 'black';
         this.textColor = textColor || 'white';
         this.font = font || '16px Consolas';
+        this.tip = '';
         this.onclick = function(){};
         this.wasPressed = false;
-        this.followed = false
+        this.followed = false;
+        this.hidden = false;
         this.draw = function(){
-            ctx.font = this.font;//register button
-            ctx.fillStyle = this.color;
-            ctx.fillRect(this.x,this.y,this.width,this.height);
-            ctx.fillStyle = this.textColor;
-            ctx.strokeRect(this.x,this.y,this.width,this.height);
-            ctx.textAlign = 'center';
-            ctx.fillText(this.text,this.x + this.width / 2,this.y + this.height / 2);
-            if(this.wasPressed){
-                ctx.fillStyle = '#0004';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }else if(this.followed){
-                ctx.fillStyle = '#FFF4';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
+            if(!this.hidden) {
+                ctx.font = this.font;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x,this.y,this.width,this.height);
+                ctx.fillStyle = this.textColor;
+                ctx.strokeRect(this.x,this.y,this.width,this.height);
+                ctx.textAlign = 'center';
+                if (typeof this.text === 'string')
+                    ctx.fillText(this.text, this.x + this.width / 2, this.y + this.height / 2);
+                else
+                    tiles.drawImg(this.text, this.x, this.y);
+                if (this.wasPressed) {
+                    ctx.fillStyle = '#0004';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                } else if (this.followed) {
+                    ctx.fillStyle = '#FFF4';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
             }
         };
         buttons.push(this);
-    }
+    };
 
     this.removeButton = function(str){
-        buttons.filter(function(btn){return btn.text == str ? true : false});
-    }
+        buttons.filter(function(btn){return btn.text !== str});
+    };
 
     this.processButtons = function(mouseX, mouseY, active){
+        var anyPressed = false;
+        var anyFollowed = false;
         for(var i = 0; i < buttons.length; i++){
             var btn = buttons[i];
+            if(btn.hidden)continue;
             if(isPointInBox(btn.x, btn.y, btn.width, btn.height, mouseX, mouseY)) {
                 if(active) {
                     if (!btn.wasPressed) {
                         btn.onclick();
                         btn.wasPressed = true;
+                        anyPressed = true;
                     }
                 }else{
                     btn.wasPressed = false;
                 }
                 btn.followed = true;
+                anyFollowed = true;
+                lastX = mouseX;
+                lastY = mouseY;
+                tip = btn.tip;
             }else{
                 btn.followed = false;
                 btn.wasPressed = false;
             }
         }
-    }
+        if(!anyFollowed)tip = '';
+
+        return anyPressed;
+    };
 
     this.getBtn = function(idx){
         return buttons[idx];
-    }
+    };
 
+    var tip = '';
+    var lastX, lastY;
+    var tileX, tileY;
     function drawButtons(){
         for(var i = 0; i < buttons.length; i++){
             buttons[i].draw();
         }
+        if(!navsHidden){
+            ctx.fillStyle = '#08F4';
+            ctx.fillRect(action * 32, 384, 32, 32);
+        }
+
+        ctx.fillStyle = '#222E'; // draw tip
+        ctx.fillRect(lastX, lastY - 18, ctx.measureText(tip).width, 18);
+        ctx.fillStyle = '#FFF';
+        ctx.textAlign = 'left';
+        ctx.fillText(tip, lastX, lastY - 1);
+
+        if(action > 0){
+            if (actionAllowed) {
+                ctx.fillStyle = '#2D28'
+            } else {
+                ctx.fillStyle = '#D228'
+            }
+            ctx.fillRect(tileX * 32 - scrollX, tileY * 32 - scrollY, 32, 32);
+        }
+    }
+
+    var navs = [
+        new this.createCanvasButton(0, 384, 32, 32, 11, '#111C', '#FFF'),
+        new this.createCanvasButton(32, 384, 32, 32, 12, '#111C', '#FFF'),
+        new this.createCanvasButton(64, 384, 32, 32, 13, '#111C', '#FFF'),
+        new this.createCanvasButton(96, 384, 32, 32, 14, '#111C', '#FFF'),
+    ];
+
+    navs[0].tip = 'Move units';
+    navs[1].tip = 'Build droid factory';
+    navs[2].tip = 'Build turret';
+    navs[3].tip = 'Build wall';
+
+    navs[0].onclick = () => {action = 0};
+    navs[1].onclick = () => {if(countActors() >= 5)action = 1; else bigs.push({t: 90, m: 'You need at least 5 selected droids'})};
+    navs[2].onclick = () => {if(countActors() >= 5)action = 2; else bigs.push({t: 90, m: 'You need at least 5 selected droids'})};
+    navs[3].onclick = () => {if(findActorDroid() !== undefined)action = 3; else bigs.push({t: 90, m: 'You need at least 1 basic droid'})};
+
+    function lookNavs(bool){
+        for(var i = 0; i < 4; i++){
+            navs[i].hidden = bool;
+        }
+        navsHidden = bool;
+        if(!bool)action = 0;
+    }
+
+    this.lockAction = function(bool, tx, ty){
+        actionAllowed = bool;
+        tileX = tx;
+        tileY = ty;
+    };
+
+    this.getAction = function(){
+        return action;
+    };
+    this.setAction = function(a){
+        action = a;
     }
 }();

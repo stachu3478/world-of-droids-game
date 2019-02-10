@@ -47,6 +47,7 @@ exports.terrain = {
     },
     getBlock:  function(x,y){
         var px,py,idx;
+        if(!x || !y)return {i: 1, u: false};
         if(!(this.data.chunks[idx = (px = Math.floor(x / chunkSize)) + "," + (py = Math.floor(y / chunkSize))] && this.data.chunks[idx].g) )
             this.genChunk(px,py);
         var rx = x % chunkSize, ry = y % chunkSize;
@@ -62,11 +63,17 @@ exports.terrain = {
             if(this.prior[b.t[bx][by].i] < this.prior[id])b.t[bx][by] = {i: id};}catch(err){console.log(err); console.log(bx + ", " + by)};
     },
     setBlockU: function(x,y,data){
-        var px,py,idx,b;
-        if(!(b = this.data.chunks[idx = (px = Math.floor(x / chunkSize)) + "," + (py = Math.floor(y / chunkSize))]) )
-            b = this.genChunk(px,py);
-        var rx = Math.floor(x % chunkSize), ry = Math.floor(y % chunkSize),bx = (rx < 0 ? rx + chunkSize : rx),by = (ry < 0 ? ry + chunkSize : ry);
-        b.t[bx][by].u = data;
+        //var px,py,idx,b;
+        //if(!(b = this.data.chunks[idx = (px = Math.floor(x / chunkSize)) + "," + (py = Math.floor(y / chunkSize))]) )
+        //    b = this.genChunk(px,py);
+        //var rx = Math.floor(x % chunkSize), ry = Math.floor(y % chunkSize),bx = (rx < 0 ? rx + chunkSize : rx),by = (ry < 0 ? ry + chunkSize : ry);
+        //b.t[bx][by].u = data;
+        //console.log('data set to: ' + typeof data);
+        //console.log(x + ', ' + y + ' set to ' + typeof data);
+        if(data)
+        if(data.x !== x || data.y !== y)
+            throw new Error('Invalid map position assigment');
+        return this.getBlock(x, y).u = data;
     },
     exists: function(x,y){
         return this.data.chunks[x + ',' + y] != undefined

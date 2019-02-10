@@ -14,123 +14,98 @@ var misc = new miscClass(chunks);
 app.use(express.static('htdocs'));
 
 var moving = [];
-function sendDroid(d, x, y, path, target){
-	if(misc.spec[d.type].canMove)
-		d.path = path || misc.pathTo(d.x,d.y,x,y);
-	if(!d.moving){
-		moving.push(d);
-		d.moving = true;
+function sendDroid(d, x, y){
+	if(misc.spec[d.type].canMove){
+		d.path = misc.pathTo(d.x,d.y,x,y);
+		if(!d.moving){
+			moving.push(d);
+			d.moving = true;
+		}
+		d.targetX = x;
+		d.targetY = y;
 	}
-	if(target !== undefined){
-		d.target = target;
-	}
-	d.targetX = x;
-	d.targetY = y;
-	d.tol = 3;
 }
 function moveDroid(d, x, y){
 	d.lastX = d.x;
 	d.lastY = d.y;
-	if(d.x && d.y)
-		chunks.setBlockU(d.x, d.y);
+	chunks.setBlockU(d.x, d.y);
 	d.x = x;
 	d.y = y;
 	chunks.setBlockU(x, y, d);
 }
-
-function eachDroid(f){
-	for(var i in droids){
-		if(droids[i])
-		if(f(parseInt(i), droids[i]))break;
-	}
-}
-
 var cpuLoad = 0;
 
 function resetPath(id){
 	var d = droids[id];
-	if(!d)return false;
 	d.path = misc.pathTo(d.x,d.y,d.targetX,d.targetY);
 	d.tol = Math.round(Math.random() * -2);
-}
+};
 
 var inter = setInterval(function(){
 	var then = Date.now();
 	var ref = false;
 	for(var i = 0;i < moving.length;i++){
 		var d = moving[i];
-		if(d){
+		if(d !== undefined){
 			var p = d.path;
 			var block;
-			var target = droids[d.target];
 			if(p && p.length > 0)block = chunks.getBlock(p[0], p[1]);
-			if((d.x === d.targetX) && (d.y === d.targetY)){
-				moving[i] = null;
+			if(p && p.length == 0){
+				delete moving[i];
 				ref = true;
 				d.moving = false;
 				d.maxOffset = 0;
 				d.dmg = false;
-				d.free = true;
-			}else if(target && (misc.dist(d.x - target.x,d.y - target.y) <= 5)) {
-				attack(d, target);
-				d.maxOffset = 0;
-			}else if(p && block && !block.u && (block.i === 0) && (d.tol > 2)) {
-				if (p.shift && misc.spec[d.type].canMove) {
+			}else if(p && !block.u && block.i === 0){
+				var target = droids[d.target];
+				if(target && (misc.dist(d.x - target.x,d.y - target.y) <= 5)){
+					attack(d,target);
+					d.maxOffset = 0;
+				}else if(misc.spec[d.type || 0].canMove){
 					moveDroid(d, p[0], p[1]);
 					p.shift();
 					p.shift();
+					//d.moving = true;
+					d.tol = Math.floor(Math.random());
 					d.maxOffset = 1;
 					d.dmg = false;
-					if (movedAlongChunk(d)) sendFreshChunks(teams[d.team]);
-				} else if (!target) {
-					moving[i] = null;
-					ref = true;
-					d.moving = false;
-					d.maxOffset = 0;
-					d.dmg = false;
-					d.free = true;
-				} else if (!misc.spec[d.type].canMove && (d.adv || d.type === 2)) {
-					eachDroid((i, d3) => {
-						if (d3.team === target.team && misc.dist(d.x - d3.x, d.y - d3.y) <= 5) {
-							sendDroid(d, d3.x, d3.y, undefined, d3.id);
-							return true;
-						}
-					})
-				}
-			} else{
-				if(d.tol > 2){
+					if(movedAlongChunk(d))sendFreshChunks(teams[d.team]);
+				};
+			}else{
+				if(d.tol >= 2){
+					var d2;
 					if(p){
 						var d2 = chunks.getBlock(p[0], p[1]).u;
-						if(d2 && !d2.moving){
-							/*moveDroid(d2, d.x, d.y);
-							moveDroid(d, d2.x, d2.y);
-							sendDroid(d2, d.x, d.y, [d.x, d.y]);
-							d2.tol = d.tol - 2;*/
+						if(d2){
 							var path = misc.pathTo(d.x,d.y,d.targetX,d.targetY);
-							if(!path && Math.random() > 0.8){
-								sendDroid(d2, d.targetX, d.targetY, path);
-								sendDroid(d, d2.targetX, d2.targetY);
+							if(!path && Math.random() > 0.9){
+								if(!d2.moving){
+									d2.moving = true;
+									moving.push(d2);
+								};
+								d2.path = d.path;
+								d.path = misc.pathTo(d2.x,d2.y,d2.targetX,d2.targetY);
 								console.log('Paths exchanged')
 							}else{
-								sendDroid(d, d.targetX, d.targetY, path);
+								d.path = path;
 								d.tol = Math.round(Math.random() * -2);
-							}
+							};
+							//};
 						}else{
 							resetPath(d.id);
-						}
+						};
 					}else{
 						resetPath(d.id);
-					}
-				}else {
-					d.maxOffset = 0;
-					d.dmg = false;
-					d.tol++;
-				}//console.log('tolling' + d.tol);
-			}
+					};
+				};
+				d.maxOffset = 0;
+				d.dmg = false;
+				d.tol++;
+			};
 		}else{
 			ref = true;
-		}
-	}
+		};
+	};
 	for(var i in factorious){
 		var d = droids[factorious[i]];
 		if(!d){
@@ -144,9 +119,10 @@ var inter = setInterval(function(){
 				var block = chunks.getBlock(d.x + pos[0], d.y + pos[1]);
 				if(!block.u && block.i === 0){
 					var droid = makeDroid(d.x + pos[0], d.y + pos[1], d.team);
-					droid.adv = 1;
+					droid.adv = d.adv;
 					d.tol = misc.cfg.factoringTime;
 					factorized = true;
+					droids.push(droid);
 					break;
 				}
 			}
@@ -162,8 +138,6 @@ var inter = setInterval(function(){
 			setType(d, d.metaMorph);
 			d.hp = misc.spec[d.type].hp;
 			d.tol = 0;
-			teams[d.team].score += misc.spec[d.type].obtainScore;
-			somethingHasChanged = true;
 		}else{
 			d.tol--;
 		}
@@ -180,7 +154,7 @@ var inter = setInterval(function(){
 	toTransform = toTransform.filter((t) => {
 		return t.done || t.timeout < 0 || !t.d ? undefined : t;
 	});
-	if(ref)moving = moving.filter((d) => d);
+	if(ref)moving = moving.filter(function(a){if(a && (a.hp > 0))return a});
 	if(attacks.length > 0){
 		io.emit("attacks", attacks);
 		attacks = [];
@@ -209,8 +183,6 @@ function Team(id,u,p,r,g,b){
 	this.anihilated = true;
 	this.temp = p === undefined;
 	this.e = "";
-	this.score = 0;
-	this.highScore = 0;
 }
 
 function getTeamByUsername(name){
@@ -249,7 +221,6 @@ function Droid(x,y,team,type = 0){
 	this.dmg = false;
 	this.id = droids.length;
 	this.type = type;
-	this.free = true;
 	//this.wcd = 0;//walking cooldown
 	if(type === 1)
 		factorious.push(this.id);
@@ -279,33 +250,19 @@ var setType = function(dis, type){
 };
 function makeDroid(x, y, team, type){
 	var droid = new Droid(x, y, team, type);
-	for(var i = 0; i < droids.length; i++){
-		if(!droids[i]) {
-			droid.id = i;
-			droids[i] = droid;
-			return droid;
-		}
-	}
-	moveDroid(droid, x, y);
+	chunks.setBlockU(x, y, droid);
 	droids.push(droid);
 	return droid;
 }
 
 function fixDroids(){
-	var n = 0;
-	eachDroid((i, d) => {
+	for(var i = 0; i < droids.length; i++){
+		var d = droids[i];
 		if(!chunks.getBlock(d.x, d.y).u){
-			console.log('ERROR');
+			//console.log('ERROR');
 			chunks.setBlockU(d.x, d.y, d);
 		}
-		if(i !== d.id){
-			droids[i] = null;
-			console.log(i + ' to ' + d.id);
-			droids[d.id] = d;
-			n++;
-		}
-	});
-	if(n)console.log('fixed ' + n);
+	}
 }
 
 function removeFactorious(d){
@@ -362,83 +319,59 @@ var deleted = [];
 function delDroid(d){
 	if(d){
 		if(d.moving)
-			delete moving[moving.indexOf(d)];
+		for(var i = 0;i < moving.length;i++){
+			if(moving[i] == d)delete moving[i];
+		}
 		deleted.push({i: d.id, x: d.x, y: d.y});
 		var t = d.team;
 		var anihilated = true;
-		var lastIter = -1;
-		var now = Date.now();
-		eachDroid((i, d2) => {
-			if(anihilated && d2 !== d && (d2.team === t))anihilated = false;
-			if(d2.target === d.id){
+		droids[d.id] = null;
+		droids = droids.filter(function(a){return a}); //add hp condition if possible
+		for(var i = 0;i < droids.length;i++){
+			var d2 = droids[i];
+			if(d2.id > d.id)d2.id--;
+			if(d2.target == d.id){
 				d2.target = false;
-				if(d2.adv || d2.type === 2){
-					if(lastIter > -1){
-						var d3 = droids[lastIter];
-						if(misc.dist(d.x - d3.x, d.y - d3.y) <= 5 || misc.dist(d3.x - d.x, d3.y - d.y) <= 5){
-							sendDroid(d2, d3.x, d3.y, [d2.x, d2.y],  d3.id);
-						}
-					}
-					eachDroid((i, d3) => {
-						if(d3.team === t && d3 !== d && (misc.dist(d.x - d3.x, d.y - d3.y) <= 5 || misc.dist(d3.x - d.x, d3.y - d.y) <= 5)){
-							sendDroid(d2, d3.x, d3.y, [d2.x, d2.y],  d3.id);
-							lastIter = i;
-							return true;
-						}
-					});
-				}
-				d2.free = true;
-			}
-		});
-		var time = Date.now() - now;
-		console.log('Finding took ' + time + 'ms');
+			}else if(d2.target > d.id)d2.target--;
+			if(anihilated && (d2.team == t))anihilated = false;
+		}
 		chunks.setBlockU(d.x, d.y);
 		if(anihilated){
-			var team = teams[t];
-			if(team.logged && team.s){
-				team.s.emit("err",{msg: "Your army was destroyed!"});
-				team.s._id = -1;
+			if(teams[t].logged && teams[t].s){
+				teams[t].s.emit("err",{msg: "Your army was destroyed!"});
+				teams[t].s._id = -1;
 			}
-			team.logged = false;
-			team.anihilated = true;
-			io.emit("big_msg",team.u + " was annihilated.");
-			if(!team.temp)team.highScore = team.score;
-			team.score = 0;
+			teams[t].logged = false;
+			teams[t].anihilated = true;
+			io.emit("big_msg",teams[t].u + " was annihilated.");
 		}
-		delete droids[d.id];
-		fixDroids();
 	}
 }
 
 var attacks = [];
 function attack(d1,d2){
 	if(misc.spec[d1.type || 0].canShot)
-	if(d1.r === 0){
+	if(d1.r == 0){
 		if(d2.hp <= 0){
 			delDroid(d2);
+			d1.target = false;
 			return false;
 		}
-		d1.r = d1.type === 2 ? 2 : 4;
-		d2.hp -= d1.type === 2 ? 10 : 5;
+		d1.r = 4;
+		d2.hp -= 5;
 		d2.dmg = true;
 		attacks.push(d1.id, d2.id);
 		if(d2.hp <= 0){
-			teams[d1.team].score += misc.spec[d2.type].score;
-			somethingHasChanged = true;
 			delDroid(d2);
-			return false;
-		}else if(d2.free && !d2.target){
-			sendDroid(d2, d1.x, d1.y, [d2.x, d2.y], d1.id);
-			if(d2.adv || d2.type === 2){// call other advanced droids
-				var now = Date.now();
-				eachDroid((i, d) => {
-					if(d.team === d2.team && d.free && (d.adv || d.type === 2) && misc.dist(d2.x - d.x, d2.y - d.y) <= 5){
-						sendDroid(d, d1.x, d1.y, [d2.x, d2.y], d1.id);
-					}
-				})
-				var time = Date.now() - now;
-				console.log('Calling took ' + time + 'ms');
-			}
+			d1.target = false;
+			return true;
+		}else if(!d2.target && !d2.moving){
+			d2.target = d1.id;
+			d2.targetX = d1.x;
+			d2.targetY = d1.y;
+			d2.path = misc.pathTo(d2.x,d2.y,d1.x,d1.y);
+			moving.push(d2);
+			d2.moving = true;
 		}
 	}else{
 		d1.r--;
@@ -448,25 +381,6 @@ function attack(d1,d2){
 function movedAlongChunk(droid){
 	return chunks.getChunk(droid.x, droid.y) !== chunks.getChunk(droid.lastX, droid.lastY);
 }
-
-var somethingHasChanged = false;
-function updateHighScores(){
-	if(somethingHasChanged){
-		var bests = [];
-		var sorted = teams.slice(0).sort((a,b) => {
-			return b.score - a.score;
-		}).slice(0,10);
-		for(var i in sorted){
-			bests.push({
-				name: sorted[i].u,
-				score: sorted[i].score,
-			})
-		}
-		io.emit('highScores', bests);
-		somethingHasChanged = false;
-	}
-}
-setInterval(updateHighScores, 30000);
 
 function prepareTeams(){
 	var toSend = [];
@@ -478,9 +392,9 @@ function prepareTeams(){
 }
 
 function killDroids(id){
-	eachDroid((i, d) => {
-		if(d.team === id)delDroid(d);
-	})
+	for(var i = droids.length - 1; i > 0;i--){
+		if(droids[i].team == id)delDroid(droids[i]);
+	}
 }
 
 function from32ToBin(mapStr){
@@ -516,18 +430,19 @@ function newSave(){
 			}
 		}
 		encodedChunks[i] = fromBinTo32(strBin);
-	}
+		console.log('encoded chunk: ' + i)
+	};
 	var tmp = [];
 	for(var i = 0;i < teams.length;i++){
 		var d = teams[i];
 		tmp.push(teams[i].s);
 		delete teams[i].s;
-	}
+	};
 	var data = {
 		map: encodedChunks,
 		droids: droids,
 		teams: teams,
-	}
+	};
 	req({
 	  uri: "http://luatomcutils.cba.pl/wod.php",
 	  method: "POST",
@@ -545,13 +460,13 @@ function newSave(){
 				console.log("Data save is successful.");
 			}else{
 				console.log("Saving data failed. Server responded with status of: "+response.code);
-			}
-		}
+			};
+		};
 	});
 	for(var i = 0;i < teams.length;i++){
 		teams[i].s = tmp[i];
-	}
-}
+	};
+};
 
 function newLoad(){
 	req({
@@ -564,7 +479,6 @@ function newLoad(){
 			setTimeout(function(){newSave()},30000);
 		}else{
 			var data = JSON.parse(body);
-			droids = data.droids;
 			chunks.init();
 			m = map;
 			var mapStr = data.map;
@@ -584,45 +498,36 @@ function newLoad(){
 							chunk[x][y] = {i: parseInt(chunkData[n++])};
 						}
 					}
+					console.log('Chunk ' + mapStr[i] + ' loaded');
 				}
 			}
 			moving = [];
+			droids = data.droids.filter(function(a){if(a.hp){return a}else{chunks.setBlockU(a.x, a.y)}});
 			teams = data.teams;
 			for(var i = 0;i < teams.length;i++){
 				teams[i].anihilated = true;
-				if(!teams[i].score)teams[i].score = 0;
-				if(!teams[i].highScore)teams[i].highScore = 0;
-			}
-			eachDroid((i, d) => {
-				d.x = parseInt(d.x);
-				d.y = parseInt(d.y);
+			};
+			for(var i = 0;i < droids.length;i++){
+				var d = droids[i];
 				moveDroid(d, d.x, d.y);
 				if(d.moving){
-					if(misc.spec[d.type].canMove)
-						moving.push(d);
-					else
-						d.moving = false;
-				}
+					moving.push(d);
+				};
 				if(teams[d.team].anihilated)teams[d.team].anihilated = false;
-				if(d.type === undefined)d.type = 0;
+				if(d.type == undefined)d.type = 0;
 				switch(d.type){
 					case 1: {
 						factorious.push(d.id);
 					}break;
 					case 4: {
 						progressive.push(d.id);
-					}break;
+					}braek;
 				}
-				d.free = true;
-				if(d.lastX === 0 && d.lastY === 0){
-					delDroid(d);
-					console.log('fake droid');
-				}
-			});
+			};
 			console.log("Map loaded");
-		}
+		};
 	});
-}
+};
 
 var chat = {
 	
@@ -640,8 +545,9 @@ var chat = {
 function getChunksOfTeam(objTeam, compObj = {}){
 	var chunkz = {};
 	var team = objTeam.id;
-	eachDroid((i, d) => {
-		if(d.team === team){
+	for(var i = 0; i < droids.length; i++){
+		var d = droids[i];
+		if(d.team == team){
 			for(var x = -32; x <= 32; x += 32) {
 				for (var y = -32; y <= 32; y += 32) {
 					var chunkId = chunks.getChunk(d.x + x, d.y + y)
@@ -650,7 +556,7 @@ function getChunksOfTeam(objTeam, compObj = {}){
 				}
 			}
 		}
-	})
+	};
 	return chunkz
 }
 
@@ -658,13 +564,14 @@ function getDroidsSeenByTeam(objTeam){
 	var chunksTeam = getChunksOfTeam(objTeam);
 	var seenDroids = [];
 	var assigned = [];
-	eachDroid((i, d) => {
+	for(var i = 0; i < droids.length; i++){
+		var d = droids[i];
 		var chunkId = chunks.getChunk(d.x, d.y);
 		if(chunkId in chunksTeam && !assigned[d.id]){
 			seenDroids.push(d);
 			assigned[d.id] = true;
 		}
-	});
+	}
 	return seenDroids;
 }
 
@@ -762,27 +669,25 @@ function init(){
 									var d = droids[msg.d[i].i];
 									if(d && (d.team === this._id)){//valid team?
 										if(misc.spec[d.type || 0].canMove) {
-											d.free = false;
-											sendDroid(d,msg.d[i].x,msg.d[i].y, undefined, msg.i);
+											sendDroid(d,msg.d[i].x,msg.d[i].y);
+											d.target = msg.i;
 										}
 									}else if(d){
 										console.log("Invalid team: found: ",d.team,", expected ",this._id);
-									}
-								}
+									};
+								};
 							});
 
 							this.on('transform',function(data){
 								var d = droids[data.d];
 								console.log('Got transform request.');
-								if(!d)
-									console.log('Vno droid');
-								else if(d.team !== this._id)
-									console.log('no team');
-								else if(d.type !== 0)console.log('no type');
-								else requestTransform(d, data.x, data.y, data.type, data.preferredDroids.map((id) => {
-									var ad = droids[id];
-									return ad.team === d.team ? ad : undefined;
-								}).filter((ad) => ad.id === d.id ? undefined : ad));
+								if(d.team === this._id && misc.spec[data.type]){
+									requestTransform(d, data.x, data.y, data.type, data.preferredDroids.map((id) => {
+										var ad = droids[id];
+										return ad.team === d.team ? ad : undefined;
+									}).filter((ad) => ad.id === d.id ? undefined : ad));
+									console.log('Verified..');
+								}
 							});
 							
 							this.on('cmd',function(cmd){
@@ -864,8 +769,6 @@ function init(){
 								this.emit("err",{msg: "Register_done"});
 								console.log('Somebody has just registered yay');
 							});
-
-							updateHighScores();
 							
 							return true;
 							break;

@@ -118,17 +118,100 @@ function pathTo(x1,y1,x2,y2){
             minx = px;
             miny = d4;
             pm[px][d4] = 127;
-        };
-        if(min == 1){ // ended finding path
-            if(path.length == 2){
+        }
+        if(min === 1){ // ended finding path
+            if(path.length === 2){
                 return [x2,y2];
             }else{
                 return path;
-            };
-        };
+            }
+        }
         px = minx;
         py = miny;
         path.unshift(minx,miny);
-    };
+    }
     return false;
+}
+
+const spec = [
+    {
+        canMove: true,
+        canShot: true,
+        canTarget: true,
+        canMakeDroids: false,
+        hp: 50,
+        transformTime: 0,
+    },
+    {
+        canMove: false,
+        canShot: false,
+        canTarget: false,
+        canMakeDroids: true,
+        hp: 200,
+        transformTime: 8,
+    },
+    {
+        canMove: false,
+        canShot: true,
+        canTarget: true,
+        canMakeDroids: false,
+        hp: 250,
+        transformTime: 12,
+    },
+    {
+        canMove: false,
+        canShot: false,
+        canTarget: false,
+        canMakeDroids: false,
+        hp: 200,
+        transformTime: 16,
+    },
+    {
+        canMove: false,
+        canShot: false,
+        canTarget: false,
+        canMakeDroids: false,
+        hp: 200,
+    }
+];
+var rowMan = [
+    [-1, -1],
+    [0, -1],
+    [1, -1],
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+    [-1, 1],
+    [0, 1],
+    [1, 1],
+];
+
+var patterns = [
+    [
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0,
+    ],
+    [
+        0, 1, 0,
+        1, 1, 1,
+        0, 1, 0,
+    ],
+    [
+        1, 0, 1,
+        0, 1, 0,
+        1, 0, 1,
+    ],
+    [
+        0, 0, 0,
+        0, 1, 0,
+        0, 0, 0,
+    ],
+];
+var canForm = function(x, y, type){
+    for(var i = 0; i < 9; i++){
+        var bi = map.getBlock(x + rowMan[i][0], y + rowMan[i][1]).i;
+        if(bi && patterns[type][i])return false
+    }
+    return true
 };

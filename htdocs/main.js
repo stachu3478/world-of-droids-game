@@ -223,14 +223,14 @@ function Entity(x, y, id, lifetime, tx, ty){
 	this.ty = ty || 0;
 	this.v = 40;
 	this.lifetime = lifetime || 10;
-};
+}
 Entity.prototype.draw = tiles.drawEntity;
 entities = [];
 
 function clearSelect(){
 	oSelected = {};
 	selected = [];
-};
+}
 
 function attack(d1,d2){
 	if(d1.r == 0){
@@ -326,14 +326,14 @@ function Droid(x,y,team,type = 0){
 		this.type = 0;
 	map.setBlockU(this.x, this.y, this);
 }
-function Map(){
+function Mapp(){
 	map.init();
 }
 
 function preinit(){
 	can.width++;
 	can.width--;
-	Map();
+	Mapp();
 	for(var i = 0;i < 10;i++){
 		do{
 			var x = 45 + Math.round(Math.random() * 10);

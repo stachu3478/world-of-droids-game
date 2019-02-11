@@ -3,11 +3,15 @@ module.exports = class Misc {
     constructor(chunksClass) {
         var chunks = chunksClass;
 
-        this.dist = function (x12, y12) {
+        var dist = function (x12, y12) {
             return Math.sqrt(x12 * x12 + y12 * y12);
         };
-        this.pathTo = function (x1, y1, x2, y2) {
-            if(!(x1 && y1))return false;
+        this.dist = dist;
+        this.pathTo = function (x1, y1, prefx2, prefy2, minDist = 1) {
+            var x2 = prefx2;
+            var y2 = prefy2;
+            if(isNaN(minDist))return false;
+            if(!(x1 && y1 && x2 && y2))throw new Error('First 4 arguments should be a number. Got ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2);
             if (chunks.getBlock(x2, y2).i === 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2) return [x2, y2];
             var pm = new Array(128);
             for (var i = 0; i < 128; i++) {
@@ -16,9 +20,18 @@ module.exports = class Misc {
             var done = false;
             var arr = [x1, y1];
             pm[x1][y1] = 1;
+            var check;
+            if(minDist > 0)
+                check = function(x3, y3){
+                    return dist(x3 - x2, y3 - y2) <= minDist
+                };
+            else
+                check = function(x, y){
+                    return x === x2 && y === y2;
+                };
+
             for (var step = 2; (step < 100) && (done === false); step++) {
                 var arr1 = [];
-                var failed = true;
                 for (var i = 0; i < arr.length; i += 2) {
                     var x = arr[i];
                     var y = arr[i + 1];
@@ -32,53 +45,60 @@ module.exports = class Misc {
                     var c4 = d4 >= 0 && d4 < 128;
                     var b1 = chunks.getBlock(d1, y);
                     if (c1 && b1 && !b1.i && !b1.u && pm[d1][y] === 0) {
-                        if (d1 === x2 && y === y2) {
+                        if (check(d1, y)) {
                             done = true;
+                            x2 = d1;
+                            y2 = y;
                             break;
                         } else {
                             arr1.push(d1, y);
                             pm[d1][y] = step;
-                            failed = false;
                         }
                     }
                     var b2 = chunks.getBlock(d2, y);
                     if (c2 && b2 && !b2.i && !b2.u && pm[d2][y] === 0) {
-                        if (d2 === x2 && y === y2) {
+                        if (check(d2, y)) {
                             done = true;
+                            x2 = d2;
+                            y2 = y;
                             break;
                         } else {
                             arr1.push(d2, y);
                             pm[d2][y] = step;
-                            failed = false;
                         }
                     }
                     var b3 = chunks.getBlock(x, d3);
                     if (c3 && b3 && !b3.i && !b3.u && pm[x][d3] === 0) {
-                        if (x === x2 && d3 === y2) {
+                        if (check(x, d3)) {
                             done = true;
+                            x2 = x;
+                            y2 = d3;
                             break;
                         } else {
                             arr1.push(x, d3);
                             pm[x][d3] = step;
-                            failed = false;
                         }
                     }
                     var b4 = chunks.getBlock(x, d4);
                     if (c4 && b4 && !b4.i && !b4.u && pm[x][d4] === 0) {
-                        if (x === x2 && d4 === y2) {
+                        if (check(x, d4)) {
                             done = true;
+                            x2 = x;
+                            y2 = d4;
                             break;
                         } else {
                             arr1.push(x, d4);
                             pm[x][d4] = step;
-                            failed = false;
                         }
                     }
                 }
                 arr = arr1;
-                if (failed) {return false;}
+                if (arr1.length === 0) {return false;}
             }
-            if(!done)return false;
+            if(!done){
+                console.log('critical path: ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2 + ' ' + + minDist);
+                return false;
+            }
             var px = x2;
             var py = y2;
             var path = [x2, y2];
@@ -129,7 +149,7 @@ module.exports = class Misc {
                 py = miny;
                 path.unshift(minx, miny);
             }
-            return false;
+            throw new Error('Path corrupted');
         };
 
         var dirs = [
@@ -147,6 +167,8 @@ module.exports = class Misc {
             var block = chunks.getBlock(x, y);
             return block.i || block.u
         }
+
+        this.isBlocked = isBlocked;
 
         this.fastPath = function(x1, y1, x2, y2){
             if(!(x1 && y1))return false;

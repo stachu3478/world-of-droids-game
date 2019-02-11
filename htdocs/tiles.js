@@ -20,8 +20,8 @@ window.tiles = new function(){
         if(++loading === 19){
             init();
             preinit();
-        };
-    };
+        }
+    }
 
     var pat1;
     var dImagesData = [];
@@ -32,7 +32,7 @@ window.tiles = new function(){
             ctx.clearRect(0,0,32,32);
             ctx.drawImage(img,0,0);
             dImagesData.push(ctx.getImageData(0,0,32,32));
-        };
+        }
     }
 
     var imgArray = [];
@@ -87,15 +87,15 @@ window.tiles = new function(){
                     ex += Math.random() * 4 - 2;
                     ey += Math.random() * 4 - 2;
                     ctx.lineTo(tx + ex - scrollX, ty + ey - scrollY);
-                };
-            };
+                }
+            }
         }else{
             var sp = (5 - l) * 40;
             if(d > sp){
                 ctx.moveTo(x + rx * sp / d - scrollX, y + ry * sp / d - scrollY);
             }else{
                 ctx.moveTo(tx - scrollX, ty - scrollY);
-            };
+            }
             if(d > lp){
                 ctx.lineTo(x + rx * lp / d - scrollX, y + ry * lp / d - scrollY);
             }else{
@@ -104,14 +104,14 @@ window.tiles = new function(){
                     ex += Math.random() * 4 - 2;
                     ey += Math.random() * 4 - 2;
                     ctx.lineTo(tx + ex - scrollX, ty + ey - scrollY);
-                };
-            };
-        };
+                }
+            }
+        }
         ctx.stroke();
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 3;
         ctx.stroke();
-    };
+    }
 
     function dDroid(x,y,t,u){
         var tp1 = u.dir || 0;
@@ -125,10 +125,12 @@ window.tiles = new function(){
         if(u.type === 4){
             ctx.fillStyle = '#2D2A';
             ctx.beginPath();
-            ctx.arc(x + 16, y + 16, 12, -Math.PI / 2, (1 - (u.tol / spec[u.type].transformTime)) * Math.PI * 3 / 2, false);
+            ctx.moveTo(x + 16, y + 16);
+            ctx.lineTo(x + 16, y - 4);
+            ctx.arc(x + 16, y + 16, 20, -Math.PI / 2, (1 - (u.tol / spec[u.metaMorph].transformTime)) * Math.PI * 3 / 2, false);
             ctx.fill();
         }
-    };
+    }
     this.dDroid = dDroid;
 
     function hpBar(p,x,y){
@@ -143,19 +145,23 @@ window.tiles = new function(){
             ctx.stroke();
             //ctx.strokeRect(sx - i,sy,i,0);
             sy -= 2;
-        };
-    };
+        }
+    }
 
-    this.drawEntity = function(){
-        switch(this.id){
-            case 0: drawLaser(this.x + 16, this.y + 16, this.tx + 16, this.ty + 16, this.lifetime); break;
-            case 1: ctx.drawImage(imgArray[Math.ceil(10 - this.lifetime)], this.x - scrollX, this.y - scrollY); break; // explode - max lifetime : 8
-        };
-        if(this.lifetime-- <= 0){
+    this.drawEntity = function() {
+        switch (this.id) {
+            case 0:
+                drawLaser(this.x + 16, this.y + 16, this.tx + 16, this.ty + 16, this.lifetime);
+                break;
+            case 1:
+                ctx.drawImage(imgArray[Math.ceil(10 - this.lifetime)], this.x - scrollX, this.y - scrollY);
+                break; // explode - max lifetime : 8
+        }
+        if (this.lifetime-- <= 0) {
             delete entities[entities.indexOf(this)];
             entities = entities.filter(f);
-        };
-    }
+        }
+    };
 
     function prerenderTile(imgId, r, g, b){
         var img = dImagesData[imgId];
@@ -168,23 +174,23 @@ window.tiles = new function(){
             imgData.data[i + 1] = base + Math.round((m / 255) * g);
             imgData.data[i + 2] = base + Math.round((m / 255) * b);
             imgData.data[i + 3] = Math.round(img.data[i + 3]);
-        };
+        }
         ctx2.clearRect(0,0,32,32);
         ctx2.putImageData(imgData,0,0);
         var img2 = new Image();
         img2.src = cv2.toDataURL("image/png");
         return img2;
-    };
+    }
 
     this.prepareDroidTiles = function(r, g, b){
         var arr = [];
         for(var j = 0;j < dImagesData.length;j++){
             arr.push(prerenderTile(j,r,g,b));
-        };
+        }
         return arr;
-    }
+    };
 
-    this.drawTileMap = function(map, x, y, generateIfNotExists){
+    this.drawTileMap = function(map, x, y, generateIfNotExists) {
         var oX = x % tileSize;
         var oY = y % tileSize;
         var sX = Math.floor(x / tileSize);
@@ -194,28 +200,28 @@ window.tiles = new function(){
         ctx.save(); // draw background pattern
         moveX = -((scrollX) % imgArray[0].naturalWidth);
         moveY = -((scrollY) % imgArray[0].naturalHeight);
-        ctx.translate(moveX,moveY);
+        ctx.translate(moveX, moveY);
         ctx.fillStyle = pat1;
         ctx.fillRect(0, 0, CW + 32, CH + 32);
         ctx.restore();
-        for(var i = sX, px = -oX;i <= eX;i++, px += tileSize){ //first loop for backdrop tiles
-            for(var j = sY ,py = -oY;j <= eY;j++ ,py += tileSize){
-                if(map.exists(i, j)) {
+        for (var i = sX, px = -oX; i <= eX; i++, px += tileSize) { //first loop for backdrop tiles
+            for (var j = sY, py = -oY; j <= eY; j++ , py += tileSize) {
+                if (map.exists(i, j)) {
                     var block = map.getBlock(i, j, generateIfNotExists);
                     if (block) {
                         var t = block.i;
                         if (t > 0) ctx.drawImage(imgArray[t] || imgArray[2], px, py);
-                    }else{
-                        ctx.drawImage(imgArray[2],px,py);
+                    } else {
+                        ctx.drawImage(imgArray[2], px, py);
                     }
-                }else{
+                } else {
                     //ctx.drawImage(imgArray[0],px,py);
                     ctx.fillStyle = '#0008';
                     ctx.fillRect(px, py, 33, 33);
-                };
-            };
-        };
-    }
+                }
+            }
+        }
+    };
 
     this.drawUnits = function(){
         for(var i in droids){//second one for droids
@@ -242,8 +248,8 @@ window.tiles = new function(){
                     u.dmg = false;
                     //};
                     if(selected.indexOf(u.id) > -1)hpBar((u.hp / spec[u.type].hp),px + offsetX,py + offsetY);
-                };
-            };
-        };
-    }
+                }
+            }
+        }
+    };
 }();

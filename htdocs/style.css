@@ -41,8 +41,9 @@ input{
 	color: aliceblue;
 }
 ul{
+	margin:15px;
 	margin-left: 3px;
-	padding-left: 3px;
+	padding-left: 15px;
 }
 #chat{
 	width: 360px;

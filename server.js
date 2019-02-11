@@ -14,9 +14,9 @@ var misc = new miscClass(chunks);
 app.use(express.static('htdocs'));
 
 var moving = [];
-function sendDroid(d, x, y, path, target){
+function sendDroid(d, x, y, path, target, strict){
 	if(misc.spec[d.type].canMove)
-		d.path = path || misc.pathTo(d.x,d.y,x,y);
+		d.path = path || misc.pathTo(d.x,d.y,x,y, (target ? 5 : 1) - strict);
 	if(!d.moving){
 		moving.push(d);
 		d.moving = true;
@@ -50,7 +50,11 @@ var cpuLoad = 0;
 function resetPath(id){
 	var d = droids[id];
 	if(!d)return false;
-	d.path = misc.pathTo(d.x,d.y,d.targetX,d.targetY);
+	d.path = misc.pathTo(d.x,d.y,d.targetX,d.targetY, (d.target !== false) * 4 + 1);
+	if(!d.path && misc.isBlocked(d.targetX, d.targetY)){
+		d.targetX += Math.round(Math.random() * 2 - 1);
+		d.targetY += Math.round(Math.random() * 2 - 1);
+	}
 	d.tol = Math.round(Math.random() * -2);
 }
 
@@ -64,7 +68,7 @@ var inter = setInterval(function(){
 			var block;
 			var target = droids[d.target];
 			if(p && p.length > 0)block = chunks.getBlock(p[0], p[1]);
-			if((d.x === d.targetX) && (d.y === d.targetY)){
+			if(p && p.length === 0 && !target){
 				moving[i] = null;
 				ref = true;
 				d.moving = false;
@@ -74,7 +78,7 @@ var inter = setInterval(function(){
 			}else if(target && (misc.dist(d.x - target.x,d.y - target.y) <= 5)) {
 				attack(d, target);
 				d.maxOffset = 0;
-			}else if(p && block && !block.u && (block.i === 0) && (d.tol > 2)) {
+			}else if(p && p.length > 0 && block && !block.u && (block.i === 0) && (d.tol > 2)) {
 				if (p.shift && misc.spec[d.type].canMove) {
 					moveDroid(d, p[0], p[1]);
 					p.shift();
@@ -286,7 +290,7 @@ function makeDroid(x, y, team, type){
 			return droid;
 		}
 	}
-	moveDroid(droid, x, y);
+	chunks.setBlockU(x, y, droid);
 	droids.push(droid);
 	return droid;
 }
@@ -335,9 +339,7 @@ function transform(d, type){
 
 var toTransform = [];
 function requestTransform(d, x, y, type, preferredDroids){
-	console.log('requesting transform');
 	if(misc.canForm(x, y, type)){
-		console.log('can form...');
 		var xys = misc.getToRemove(x, y, type);
 		var pid = 0;
 		if(xys.length / 2 > preferredDroids.length)return false;
@@ -348,13 +350,12 @@ function requestTransform(d, x, y, type, preferredDroids){
 				if(pid > preferredDroids.length)return false;
 			}
 			var droid = preferredDroids[pid];
-			sendDroid(droid, xys[i], xys[i + 1]);
+			sendDroid(droid, xys[i], xys[i + 1], null, null, 1);
 			n++;
 			pid++;
 		}
 		sendDroid(d, x, y);
 		toTransform.push({d: d, x: x, y: y, type: type, timeout: 200});
-		console.log('req done ' + n);
 	}
 }
 
@@ -375,12 +376,19 @@ function delDroid(d){
 				if(d2.adv || d2.type === 2){
 					if(lastIter > -1){
 						var d3 = droids[lastIter];
-						if(misc.dist(d.x - d3.x, d.y - d3.y) <= 5 || misc.dist(d3.x - d.x, d3.y - d.y) <= 5){
+						if(misc.dist(d2.x - d3.x, d2.y - d3.y) <= 5){
 							sendDroid(d2, d3.x, d3.y, [d2.x, d2.y],  d3.id);
 						}
 					}
 					eachDroid((i, d3) => {
-						if(d3.team === t && d3 !== d && (misc.dist(d.x - d3.x, d.y - d3.y) <= 5 || misc.dist(d3.x - d.x, d3.y - d.y) <= 5)){
+						if(d3.team === t && d3 !== d && misc.dist(d2.x - d3.x, d2.y - d3.y) <= 5){
+							sendDroid(d2, d3.x, d3.y, [d2.x, d2.y],  d3.id);
+							lastIter = i;
+							return true;
+						}
+					});
+					if(misc.spec[d2.type].canMove && !d2.target)eachDroid((i, d3) => {
+						if(d3.team === t && d3 !== d && (misc.dist(d3.x - d.x, d3.y - d.y) <= 5)){
 							sendDroid(d2, d3.x, d3.y, [d2.x, d2.y],  d3.id);
 							lastIter = i;
 							return true;
@@ -682,9 +690,8 @@ function getFreshChunks(objTeam){
 			for (var i = 0; i < x.length; i++) {
 				delete x[i].u;
 			}
-			;
 			return x;
-		})
+		});
 		toSend[chunk].g = true;
 		toSend[chunk].c = false;
 	}

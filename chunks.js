@@ -71,7 +71,7 @@ exports.terrain = {
         //console.log('data set to: ' + typeof data);
         //console.log(x + ', ' + y + ' set to ' + typeof data);
         if(data)
-        if(data.x !== x || data.y !== y)
+        if(!data.x || !data.y || data.x !== x || data.y !== y)
             throw new Error('Invalid map position assigment');
         return this.getBlock(x, y).u = data;
     },

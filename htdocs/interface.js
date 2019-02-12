@@ -45,7 +45,9 @@ window.interface = new function(){
             var yp = 320;
             var u = droids[selected[0]];
             var maxHp = spec[u.type].hp;
+            ctx.lineWidth = 2;
             ctx.strokeRect(xp,yp,128,64);
+            ctx.fillStyle = "#000B";
             ctx.fillRect(xp,yp,128,64);
             ctx.fillStyle = "black";
             ctx.fillRect(xp + 44,yp + 4,80,24);
@@ -54,22 +56,23 @@ window.interface = new function(){
             ctx.textAlign = "center";
             ctx.fillStyle = "white";
             //ctx.font = "20px Arial";
+            ctx.strokeStyle = "black";
             ctx.strokeText(u.hp + " / " + maxHp,xp + 84,yp + 21);
             ctx.fillText(u.hp + " / " + maxHp,xp + 84,yp + 21);
             ctx.textAlign = "left";
-            ctx.fillStyle = "black";
+            ctx.fillStyle = "white";
             ctx.fillText((u.moving ? (u.target === false ? "Moving" : "Attacking") : "Idle"),xp + 36,yp + 58);
             if(navsHidden)lookNavs(false);
         }else{
             ctx.strokeRect(0,324,40,1);
             if(!navsHidden)lookNavs(true);
-        };
+        }
     }
 
     function drawSelectedDroids(){
-        ctx.fillStyle = "grey";
         ctx.strokeStyle = "lightGrey";
         ctx.strokeRect(0,0,41,320);
+        ctx.fillStyle = "#000B";
         ctx.fillRect(0,0,40,325);
         drawSelectedDroidCard();
         ctx.fillStyle = "grey";
@@ -84,12 +87,12 @@ window.interface = new function(){
                 u.dmg = false;
                 var maxHp = spec[u.type].hp;
                 ctx.fillRect(32, ypos + 32 - u.hp * 32 / maxHp,8,u.hp * 32 / maxHp);
-            };
-        };
+            }
+        }
         var interfacePos = selected.indexOf(onDroid);
         if(interfacePos !== -1){//interface droid frame
             ctx.strokeRect(0, 320 - interfacePos * 32, 32, 32);
-        };
+        }
     }
 
     function drawMap(){
@@ -131,7 +134,6 @@ window.interface = new function(){
         } else {
             txt = "X: " + tex + ", Y: " + tey;
         }
-        ;
 
         txt += " " + serverLoad + " % / " + clientLoad + " %"; // right down bar
         ctx.fillStyle = "black";
@@ -208,7 +210,7 @@ window.interface = new function(){
                 ctx.globalAlpha = (30 - big.t) / 30;
             }else{
                 bigs.shift();
-            };
+            }
             big.t++;
             ctx.textAlign = "center";
             ctx.font = '20px Consolas';

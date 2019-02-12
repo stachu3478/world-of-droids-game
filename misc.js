@@ -12,6 +12,7 @@ module.exports = class Misc {
             var y2 = prefy2;
             if(isNaN(minDist))return false;
             if(!(x1 && y1 && x2 && y2))throw new Error('First 4 arguments should be a number. Got ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2);
+            console.log('critical path: ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2 + ' ' + + minDist);
             if (chunks.getBlock(x2, y2).i === 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2) return [x2, y2];
             var pm = new Array(128);
             for (var i = 0; i < 128; i++) {
@@ -31,6 +32,7 @@ module.exports = class Misc {
                 };
 
             for (var step = 2; (step < 100) && (done === false); step++) {
+                if (arr.length === 0) {return false;};
                 var arr1 = [];
                 for (var i = 0; i < arr.length; i += 2) {
                     var x = arr[i];
@@ -93,7 +95,6 @@ module.exports = class Misc {
                     }
                 }
                 arr = arr1;
-                if (arr1.length === 0) {return false;}
             }
             if(!done){
                 console.log('critical path: ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2 + ' ' + + minDist);
@@ -363,7 +364,6 @@ module.exports = class Misc {
             for(var i = 0; i < 9; i++){
                 var d = chunks.getBlock(x + rowMan[i][0], y + rowMan[i][1]).u;
                 if(patterns[type][i] === 1 && !(d && d.type === 0)){
-                    console.log(i + ' xd ' + (d && d.id));
                     return false
                 }
             }

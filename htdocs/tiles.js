@@ -127,7 +127,7 @@ window.tiles = new function(){
             ctx.beginPath();
             ctx.moveTo(x + 16, y + 16);
             ctx.lineTo(x + 16, y - 4);
-            ctx.arc(x + 16, y + 16, 20, -Math.PI / 2, (1 - (u.tol / spec[u.metaMorph].transformTime)) * Math.PI * 3 / 2, false);
+            ctx.arc(x + 16, y + 16, 20, -Math.PI / 2, (1 - (u.tol / spec[u.metaMorph].transformTime)) * Math.PI * 2 - Math.PI / 2, false);
             ctx.fill();
         }
     }

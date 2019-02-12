@@ -20,8 +20,8 @@ var map = {
             c.t[i] = [];
             for(var j = 0; j < chunkSize; j++){
                 c.t[i][j] = {i: 7};//unknown block
-            };
-        };
+            }
+        }
         this.data.chunks[x + "," + y] = c;
         console.log("Chunk " + x + " " + y + " set");
         return c;
@@ -32,13 +32,13 @@ var map = {
             c = this.setChunk(x,y);
         }else{
             c = this.data.chunks[idx];
-        };
+        }
         c.g = true;
         for(var i = 0; i < chunkSize; i++){
             for(var j = 0; j < chunkSize; j++){
                 c.t[i][j] = {i: Math.random() > 0.0625 ? 0 : 1}
-            };
-        };
+            }
+        }
         c.g = true;
     },
     getBlock:  function(x,y,g){
@@ -63,16 +63,11 @@ var map = {
             if(this.prior[b.t[bx][by].i] < this.prior[id])b.t[bx][by] = {i: id};}catch(err){console.log(err); console.log(bx + ", " + by)};
     },
     setBlockU: function(x,y,data,g){
-        var px,py,idx,b;
-        if(!(b = this.data.chunks[idx = (px = Math.floor(x / chunkSize)) + "," + (py = Math.floor(y / chunkSize))]) ) {
-            if(g){
-                this.genChunk(px,py);
-            }else{
-                return null;
-            }
-        }
-        var rx = Math.floor(x % chunkSize), ry = Math.floor(y % chunkSize),bx = (rx < 0 ? rx + chunkSize : rx),by = (ry < 0 ? ry + chunkSize : ry);
-        b.t[bx][by].u = data;
+        if(data)
+            if(!data.x || !data.y || data.x !== x || data.y !== y)
+                throw new Error('Invalid map position assigment');
+        this.getBlock(x, y).u = data;
+        return data;
     },
     exists: function(x,y){
         return this.data.chunks[this.getChunk(x,y)] !== undefined
@@ -80,4 +75,4 @@ var map = {
     getChunk: function(x, y){
         return (Math.floor(x / chunkSize)) + "," + (Math.floor(y / chunkSize))
     }
-}
+};

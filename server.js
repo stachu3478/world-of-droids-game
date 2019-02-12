@@ -214,7 +214,8 @@ var inter = setInterval(function(){
 					droid.adv = 1;
 					d.tol = misc.cfg.factoringTime;
 					factorized = true;
-					factored.push({x: d.x, y: d.y});
+					factored.push({x: droid.x, y: droid.y});
+					chunks.setBlockU(droid.x, droid.y, droid);
 					break;
 				}
 			}
@@ -440,7 +441,7 @@ function delDroid(d){
 		var lastIter = -1;
 		var now = Date.now();
 		eachDroid((i, d2) => {
-			if(anihilated && d2 !== d && (d2.team === t))anihilated = false;
+			if(anihilated && d2 !== d && (d2.team === t) && misc.spec[d2.type].lone)anihilated = false;
 			if(d2.target === d.id){
 				d2.target = false;
 				if(d2.adv || d2.type === 2){
@@ -566,7 +567,7 @@ function from32ToBin(mapStr){
 	var strBin = '';
 	if(!mapStr)return '';
 	for(var i = 0;i < mapStr.length;i++){
-		var part = parseInt(mapStr[i],32).toString(2)
+		var part = parseInt(mapStr[i],32).toString(2);
 		strBin += "0".repeat(5 - part.length) + parseInt(mapStr[i],32).toString(2);
 	}
 	return strBin;
@@ -606,7 +607,7 @@ function newSave(){
 		map: encodedChunks,
 		droids: droids,
 		teams: teams,
-	}
+	};
 	req({
 	  uri: "http://luatomcutils.cba.pl/wod.php",
 	  method: "POST",
@@ -673,7 +674,7 @@ function newLoad(){
 				if(!teams[i].highScore)teams[i].highScore = 0;
 			}
 			eachDroid((i, d) => {
-				if(d.id === 1)return false;
+				if(d.id < 2)return false;
 				d.x = parseInt(d.x);
 				d.y = parseInt(d.y);
 				if(d.moving){
@@ -713,7 +714,7 @@ var chat = {
 	send: function(evt){
 		
 		var evt = evt;
-		evt.rank = teams[evt.id].temp;
+		evt.rank = evt.id === 9 ? 2 : (!teams[evt.id].temp) * 1;
 		this.buffer.push(evt);
 		if(this.buffer.length > 20)this.buffer.shift();
 		return io.emit("msg", evt);
@@ -727,13 +728,13 @@ function getChunksOfTeam(objTeam, compObj = {}){
 		if(d.team === team){
 			for(var x = -32; x <= 32; x += 32) {
 				for (var y = -32; y <= 32; y += 32) {
-					var chunkId = chunks.getChunk(d.x + x, d.y + y)
+					var chunkId = chunks.getChunk(d.x + x, d.y + y);
 					if (!(chunkId in chunkz) && !(chunkId in compObj))
 						chunkz[chunkId] = true;
 				}
 			}
 		}
-	})
+	});
 	return chunkz
 }
 
@@ -774,7 +775,7 @@ function getFreshChunks(objTeam){
 
 function sendFreshChunks(objTeam){
 	if(objTeam.logged)objTeam.s.emit('chunks', getFreshChunks(objTeam));
-};
+}
 
 function init(){
 	
@@ -824,7 +825,10 @@ function init(){
 								if(this._id > -1){
 									console.log(teams[this._id].u + " disconnected. Reason: "+err);
 									teams[this._id].logged = false;
-									if(teams[this._id].temp)killDroids(this._id);
+									if(teams[this._id].temp){
+										killDroids(this._id);
+										teams[this._id].score = 0;
+									}
 									this._id = -1;
 									//var evt = {user: this.username.toString()};
 									//io.emit('bye',evt);
@@ -966,7 +970,7 @@ function init(){
 		s._id = -1;
 		console.log("A user connected.");
 	});
-};
+}
 init();
 
 http.listen(PORT, function(){ //nasluchuje

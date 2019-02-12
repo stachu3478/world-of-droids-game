@@ -112,9 +112,9 @@ window.interface = new function(){
                     var t = teams[u.team] || {r: Math.floor(Math.random() * 255), g: Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255)};
                     ctx.fillStyle = t.dcdec || "grey";
                     ctx.fillRect(x + u.x * 3,y + u.y * 3,3,3);
-                };
-            };
-        };
+                }
+            }
+        }
     }
 
     function drawMarkingArea() {
@@ -148,34 +148,42 @@ window.interface = new function(){
     function leftDownBar(){
         var txt = "";
         if(selected.length > 0){
-            if(onDroid !== undefined){
-                if(droids[onDroid] && droids[onDroid].team == myTeam){
-                    if(selected.indexOf(onDroid) == -1){
+            if(action){
+                let arr = [
+                    'Droid',
+                    'Droid factory',
+                    'Turret',
+                    'Wall',
+                ];
+                txt = arr[action] + " Placement";
+            }else if(onDroid !== undefined){
+                if(droids[onDroid] && droids[onDroid].team === myTeam){
+                    if(selected.indexOf(onDroid) === -1){
                         txt = "Ctrl + click to select.";
                     }else{
                         txt = "Shift + click to deselect.";
-                    };
+                    }
                 }else{
                     txt = "Click to attack.";
-                };
+                }
             }else{
                 if(marking){
                     txt = "Press space to cancel.";
                 }else{
                     txt = "Control + click and drag to mark an another area of droid selection. Spacebar - (de)select all. Click to move units.";
-                };
-            };
+                }
+            }
         }else{
-            if(droids[onDroid] && droids[onDroid].team == myTeam){
+            if(droids[onDroid] && droids[onDroid].team === myTeam){
                 txt = "Click to select.";
             }else{
                 if(marking){
                     txt = "Press space to cancel.";
                 }else{
                     txt = "Click and drag to mark an area of droid selection.";
-                };
-            };
-        };
+                }
+            }
+        }
         ctx.fillStyle = "black";
         var len = ctx.measureText(txt).width + 2;
         ctx.textAlign = "left";
@@ -217,7 +225,7 @@ window.interface = new function(){
             ctx.fillText(big.m,CW / 2,CH / 4);
             ctx.strokeText(big.m,CW / 2,CH / 4);
             ctx.globalAlpha = 1;
-        };
+        }
     }
 
     this.draw = function(){
@@ -229,7 +237,7 @@ window.interface = new function(){
         leftDownBar();
         drawBigNotification();
         drawButtons();
-    }
+    };
 
     var buttons = [];
     this.createCanvasButton = function(x, y, width, height, text, color, textColor, font){

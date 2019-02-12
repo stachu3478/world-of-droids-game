@@ -261,6 +261,7 @@ module.exports = class Misc {
                 transformTime: 0,
                 score: 1,
                 obtainScore: 0,
+                lone: 1,
             },
             {
                 canMove: false,
@@ -271,6 +272,7 @@ module.exports = class Misc {
                 transformTime: 8,
                 score: 10,
                 obtainScore: 20,
+                lone: 1,
             },
             {
                 canMove: false,
@@ -281,6 +283,7 @@ module.exports = class Misc {
                 transformTime: 12,
                 score: 20,
                 obtainScore: 40,
+                lone: 0,
             },
             {
                 canMove: false,
@@ -291,6 +294,7 @@ module.exports = class Misc {
                 transformTime: 16,
                 score: 1,
                 obtainScore: 1,
+                lone: 0,
             },
             {
                 canMove: false,
@@ -300,6 +304,7 @@ module.exports = class Misc {
                 hp: 200,
                 score: 1,
                 obtainScore: 0,
+                lone: 1,
             }
         ];
 

@@ -3,8 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="3403d63d-d41f-4e09-91a3-65f8dcdb9a7a" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chunks.js" beforeDir="false" afterPath="$PROJECT_DIR$/chunks.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/htdocs/chunkz.js" beforeDir="false" afterPath="$PROJECT_DIR$/htdocs/chunkz.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/htdocs/interface.js" beforeDir="false" afterPath="$PROJECT_DIR$/htdocs/interface.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/htdocs/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/htdocs/main.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/htdocs/tiles.js" beforeDir="false" afterPath="$PROJECT_DIR$/htdocs/tiles.js" afterDir="false" />
@@ -25,8 +23,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/server.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="504">
-              <caret line="133" column="54" selection-start-line="133" selection-start-column="54" selection-end-line="133" selection-end-column="54" />
+            <state relative-caret-position="398">
+              <caret line="214" column="51" lean-forward="true" selection-start-line="214" selection-start-column="51" selection-end-line="214" selection-end-column="51" />
             </state>
           </provider>
         </entry>
@@ -34,8 +32,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/misc.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="4420">
-              <caret line="260" column="21" selection-start-line="260" selection-start-column="21" selection-end-line="260" selection-end-column="21" />
+            <state relative-caret-position="4386">
+              <caret line="258" column="37" selection-start-line="258" selection-start-column="37" selection-end-line="258" selection-end-column="37" />
             </state>
           </provider>
         </entry>
@@ -79,8 +77,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/htdocs/tiles.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2142">
-              <caret line="126" column="28" selection-start-line="126" selection-start-column="28" selection-end-line="126" selection-end-column="28" />
+            <state relative-caret-position="2839">
+              <caret line="167" column="100" selection-start-line="167" selection-start-column="100" selection-end-line="167" selection-end-column="100" />
             </state>
           </provider>
         </entry>
@@ -88,8 +86,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/htdocs/main.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="351">
-              <caret line="437" column="33" lean-forward="true" selection-start-line="437" selection-start-column="33" selection-end-line="437" selection-end-column="33" />
+            <state relative-caret-position="395">
+              <caret line="627" column="52" lean-forward="true" selection-start-line="627" selection-start-column="52" selection-end-line="627" selection-end-column="52" />
             </state>
           </provider>
         </entry>
@@ -106,8 +104,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/htdocs/interface.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="799">
-              <caret line="47" column="30" selection-start-line="47" selection-start-column="30" selection-end-line="47" selection-end-column="30" />
+            <state relative-caret-position="2601">
+              <caret line="153" column="36" selection-start-line="153" selection-start-column="36" selection-end-line="153" selection-end-column="36" />
             </state>
           </provider>
         </entry>
@@ -116,15 +114,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>sendDroid</find>
-      <find>attacki</find>
-      <find>null</find>
-      <find>target =</find>
-      <find>undefined</find>
-      <find>attacking</find>
-      <find>delete</find>
-      <find>target</find>
-      <find>Attacking</find>
       <find>.target</find>
       <find>.free</find>
       <find>tran</find>
@@ -146,6 +135,15 @@
       <find>dDroid</find>
       <find>makeDroid</find>
       <find>&quot;d&quot;</find>
+      <find>id ==</find>
+      <find>rank</find>
+      <find>G</find>
+      <find>chat</find>
+      <find>chat.send</find>
+      <find>firstLogin</find>
+      <find>scrollTo</find>
+      <find>discon</find>
+      <find>Entity</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -158,10 +156,10 @@
         <option value="$PROJECT_DIR$/htdocs/index.html" />
         <option value="$PROJECT_DIR$/htdocs/update_log.js" />
         <option value="$PROJECT_DIR$/htdocs/style.css" />
-        <option value="$PROJECT_DIR$/misc.js" />
-        <option value="$PROJECT_DIR$/htdocs/interface.js" />
         <option value="$PROJECT_DIR$/chunks.js" />
         <option value="$PROJECT_DIR$/htdocs/chunkz.js" />
+        <option value="$PROJECT_DIR$/misc.js" />
+        <option value="$PROJECT_DIR$/htdocs/interface.js" />
         <option value="$PROJECT_DIR$/htdocs/tiles.js" />
         <option value="$PROJECT_DIR$/server.js" />
         <option value="$PROJECT_DIR$/htdocs/main.js" />
@@ -169,10 +167,10 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-1808" />
-    <option name="y" value="-105" />
-    <option name="width" value="1616" />
-    <option name="height" value="916" />
+    <option name="x" value="200" />
+    <option name="y" value="112" />
+    <option name="width" value="1200" />
+    <option name="height" value="676" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -202,6 +200,7 @@
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="javascript.nodejs.core.library.configured.version" value="8.11.2" />
+    <property name="last_opened_file_path" value="C:/cryptoDataShop/client" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="nodejs_package_manager_path" value="npm" />
@@ -245,12 +244,13 @@
       <workItem from="1549780504181" duration="12699000" />
       <workItem from="1549801737707" duration="19852000" />
       <workItem from="1549873602850" duration="22798000" />
-      <workItem from="1549956062375" duration="36000" />
+      <workItem from="1549956062375" duration="5435000" />
+      <workItem from="1549998905326" duration="288000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="146160000" />
+    <option name="totallyTimeSpent" value="151847000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -262,10 +262,10 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-1928" y="-308" width="1936" height="1216" extended-state="6" />
+    <frame x="-8" y="-8" width="1616" height="916" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24920969" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.24920969" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -283,6 +283,25 @@
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
     </layout>
+    <layout-to-restore>
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24920969" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49873257" visible="true" weight="0.32871652" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32950193" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.32950193" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32950193" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50126743" side_tool="true" weight="0.32950193" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
@@ -295,17 +314,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/server.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="504">
-          <caret line="133" column="54" selection-start-line="133" selection-start-column="54" selection-end-line="133" selection-end-column="54" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/misc.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4420">
-          <caret line="260" column="21" selection-start-line="260" selection-start-column="21" selection-end-line="260" selection-end-column="21" />
+        <state relative-caret-position="4386">
+          <caret line="258" column="37" selection-start-line="258" selection-start-column="37" selection-end-line="258" selection-end-column="37" />
         </state>
       </provider>
     </entry>
@@ -339,8 +351,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/htdocs/tiles.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2142">
-          <caret line="126" column="28" selection-start-line="126" selection-start-column="28" selection-end-line="126" selection-end-column="28" />
+        <state relative-caret-position="2839">
+          <caret line="167" column="100" selection-start-line="167" selection-start-column="100" selection-end-line="167" selection-end-column="100" />
         </state>
       </provider>
     </entry>
@@ -353,15 +365,22 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/htdocs/interface.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="799">
-          <caret line="47" column="30" selection-start-line="47" selection-start-column="30" selection-end-line="47" selection-end-column="30" />
+        <state relative-caret-position="2601">
+          <caret line="153" column="36" selection-start-line="153" selection-start-column="36" selection-end-line="153" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/server.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="398">
+          <caret line="214" column="51" lean-forward="true" selection-start-line="214" selection-start-column="51" selection-end-line="214" selection-end-column="51" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/htdocs/main.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="351">
-          <caret line="437" column="33" lean-forward="true" selection-start-line="437" selection-start-column="33" selection-end-line="437" selection-end-column="33" />
+        <state relative-caret-position="395">
+          <caret line="627" column="52" lean-forward="true" selection-start-line="627" selection-start-column="52" selection-end-line="627" selection-end-column="52" />
         </state>
       </provider>
     </entry>

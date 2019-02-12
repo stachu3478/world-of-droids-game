@@ -17,7 +17,7 @@ window.tiles = new function(){
     const droidTypes = 8;
     loading = 0;
     function incl(){
-        if(++loading === 19){
+        if(++loading === 20){
             init();
             preinit();
         }
@@ -64,6 +64,11 @@ window.tiles = new function(){
         img.onload = incl;
         imgArray.push(img);
     }
+
+    var img = new Image();
+    img.src = "tiles/arrows.png";
+    img.onload = incl;
+    imgArray.push(img);
 
     this.drawImg = function(i, x, y){
         return ctx.drawImage(imgArray[i], x, y);
@@ -156,6 +161,13 @@ window.tiles = new function(){
             case 1:
                 ctx.drawImage(imgArray[Math.ceil(10 - this.lifetime)], this.x - scrollX, this.y - scrollY);
                 break; // explode - max lifetime : 8
+            case 2:{
+                ctx.save();
+                var s = this.lifetime / this.startLifetime;
+                ctx.scale(s, s);
+                ctx.drawImage(imgArray[18], (this.x - scrollX) / s - 48, (this.y - scrollY) / s - 48);
+                ctx.restore();
+            }break; // explode - max lifetime : 8
         }
         if (this.lifetime-- <= 0) {
             delete entities[entities.indexOf(this)];
@@ -239,8 +251,8 @@ window.tiles = new function(){
                             offsetX += (u.lastX - u.x) * stamp * tileSize;
                             offsetY += (u.lastY - u.y) * stamp * tileSize;
                             u.maxOffset = stamp;
-                        };
-                    };
+                        }
+                    }
                     if(isNaN(u.dir))u.dir = dirsbytype[(u.x - u.lastX) + "," + (u.y - u.lastY)] || 0;
                     dDroid(px + offsetX,py + offsetY,t,u);
                     //if(u.dmg){

@@ -93,23 +93,23 @@ document.body.onkeydown = function(evt){
 			if(!chatting)evt.preventDefault();
 		}else{
 			selectAll();
-		};
-	};break;
+		}
+	}break;
 	case "m":{
 		mapEnabled = !mapEnabled;
-	};break;
+	}break;
 		case 'Up':{
 			pressed.ArrowUp = true;
-		};break;
+		}break;
 		case 'Down':{
 			pressed.ArrowDown = true;
-		};break;
+		}break;
 		case 'Left':{
 			pressed.ArrowLeft = true;
-		};break;
+		}break;
 		case 'Right':{
 			pressed.ArrowRight = true;
-		};break;
+		}break;
 	}
 };
 document.body.onkeyup = function(evt){
@@ -117,19 +117,19 @@ document.body.onkeyup = function(evt){
 	switch(evt.key){
 		case "Spacebar":{
 			pressed[' '] = false;
-		};break;
+		}break;
 		case "Up":{
 			pressed.ArrowUp = false;
-		};break;
+		}break;
 		case "Down":{
 			pressed.ArrowDown = false;
-		};break;
+		}break;
 		case 'Left':{
 			pressed.ArrowLeft = false;
-		};break;
+		}break;
 		case 'Right':{
 			pressed.ArrowRight = false;
-		};break;
+		}break;
 	}
 };
 
@@ -138,8 +138,8 @@ function checkp(){
 		document.getElementById("regbtn").disabled = false;
 	}else{
 		document.getElementById("regbtn").disabled = true;
-	};
-};
+	}
+}
 function register(){
 	var ob = {
 		u: document.getElementById("username_reg").value,
@@ -147,12 +147,12 @@ function register(){
 		e: document.getElementById("email").value,
 	};
 	socket.emit("register",ob);
-};
+}
 function backReg(){
 	lpanel.hidden = false;
 	rpanel.hidden = true;
 	overlay.hidden = true;
-};
+}
 
 var dirsbytype = {
 	
@@ -186,6 +186,7 @@ function Entity(x, y, id, lifetime, tx, ty){
 	this.ty = ty || 0;
 	this.v = 40;
 	this.lifetime = lifetime || 10;
+	this.startLifetime = lifetime || 10;
 }
 Entity.prototype.draw = tiles.drawEntity;
 entities = [];
@@ -196,7 +197,7 @@ function clearSelect(){
 }
 
 function attack(d1,d2){
-	if(d1.r == 0){
+	if(d1.r === 0){
 		if(d2.hp <= 0){
 			d1.target = null;
 			return false;
@@ -245,9 +246,11 @@ function scrollToDroid(droidId){
 
 function scrollToMyDroids(){
 	for(var i in droids){//scrolls to your army
-		if(droids[i].team == myTeam){
+		var d = droids[i];
+		if(d.team === myTeam){
 			scrollToDroid(i);
 			scrolledToMyDroids = true;
+			entities.push(new Entity(d.x * 32 + 16, d.y * 32 + 16, 2, 30, 0, 0));
 		}
 	}
 }
@@ -306,19 +309,19 @@ function preinit(){
 			if((block.i == 0) && (block.u == null)){
 				done = true;
 				droids.push(new Droid(x,y,0));
-			};
+			}
 		}while(!done);
-	};
+	}
 	myTeam = 0;
 	teams = [{img: tiles.prepareDroidTiles(Math.random() * 255, Math.random() * 255,Math.random() * 255), temp: false}];
 	render(map,scrollX,scrollY, true);//draw that background
-};
+}
 function red(str){//just span with red color
 	var el = document.createElement("span");
 	el.style.color = "red";
 	el.innerText = str;
 	return el;
-};
+}
 
 var cmdPrefix = "/";
 var chat = {
@@ -329,11 +332,13 @@ var chat = {
 		
 		"chat_quest",
 		"chat_member",
+		"chat_admin",
 	],
 	prefixes: [
 		
-		"[Q]",
+		"[G]",
 		"[M]",
+		"[A]",
 	],
 	send: function(msg){
 		
@@ -354,7 +359,7 @@ var chat = {
 	receive: function(evt){
 		
 		var el = document.createElement("li");
-		var rId = evt.rank ? 0 : 1;
+		var rId = evt.rank;
 		if(evt.type === "msg"){
 			
 			el.className = chat.cssClasses[rId];
@@ -371,7 +376,7 @@ var chat = {
 		}else if(evt.type === "bprivate"){
 			el.className = "chat_private";
 			el.innerText = "To: " + chat.prefixes[rId] + teams[evt.id].u + ": " + evt.msg;
-		};
+		}
 		msgs.appendChild(el);
 	},
 };
@@ -399,7 +404,7 @@ socket.on("err",function(err){
 		case "Invalid email": {out2.innerText = "Invalid e-mail"};break;
 		case "Same email or nickname exists": {out2.innerText = "Same email or nickname exists"};break;
 		case "Register_done": {out2.innerText = "You have been registered.";backReg()};break;
-	};
+	}
 });
 socket.on("disconnect",function(evt){
 	menu.hidden = false;
@@ -413,10 +418,10 @@ socket.on("map",function(evt){
 		var t = teams[i];
 		t.cs = t.r + t.g + t.b;
 		t.img = tiles.prepareDroidTiles(t.r, t.g, t.b);
-	};
+	}
 	for(var i = 0;i < evt.c.length;i++){
 		chat.receive(evt.c[i]);
-	};
+	}
 	myTeam = evt.i;
 	if(firstLogin){
 		socket.on("d",function(evt){
@@ -557,10 +562,10 @@ function init(){
 					selected[id] = selected[0];
 					selected[0] = tmp;
 					scrollToDroid(selected[0]);
-				};
-			};
-		};
-	};
+				}
+			}
+		}
+	}
 	can.onmouseup = function(evt){
 		if(marking){
 			var emx = evt.offsetX + scrollX;
@@ -585,7 +590,6 @@ function init(){
 								if (!pressed.Control) clearSelect();
 								if (selected.indexOf(u.id) === -1) selected.push(u.id);
 							}
-							;
 						} else {
 							var arr = [];
 							var attack = u && (u.id !== undefined);
@@ -621,7 +625,10 @@ function init(){
 									arr.push({i: d.id, x: d.targetX, y: d.targetY});
 								}
 							}
-							socket.emit("action", {d: arr, i: attack ? u.id : false});
+							if(selected.length > 0){
+								socket.emit("action", {d: arr, i: attack ? u.id : false});
+								entities.push(new Entity(tex * tileSize + 16, tey * tileSize + 16, 2, 30, 0, 0));
+							}
 							console.log(arr);
 						}
 					}break;

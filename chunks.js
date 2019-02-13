@@ -60,7 +60,8 @@ exports.terrain = {
         b = this.data.chunks[idx = (px = Math.floor(x / chunkSize)) + "," + (py = Math.floor(y / chunkSize))];
         var rx = Math.floor(x % chunkSize), ry = Math.floor(y % chunkSize),bx = (rx < 0 ? rx + chunkSize : rx),by = (ry < 0 ? ry + chunkSize : ry);
         try{
-            if(this.prior[b.t[bx][by].i] < this.prior[id])b.t[bx][by] = {i: id};}catch(err){console.log(err); console.log(bx + ", " + by)};
+            b.t[bx][by] = {i: id};
+        }catch(err){console.log(err); console.log(bx + ", " + by)};
     },
     setBlockU: function(x,y,data){
         if(data)

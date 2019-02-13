@@ -70,3 +70,6 @@ typings/
 
 #sever data
 data/
+
+# .svg drawing for dev
+.svg

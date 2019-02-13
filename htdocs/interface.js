@@ -21,7 +21,7 @@ window.interface = new function(){
             ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / maxHp),22);
             ctx.textAlign = "center";
             ctx.fillStyle = "white";
-            //ctx.font = "20px Arial";
+            ctx.font = '14px Consolas';
             ctx.strokeStyle = "black";
             ctx.strokeText(u.hp + " / " + maxHp,xp + 84,yp + 21);
             ctx.fillText(u.hp + " / " + maxHp,xp + 84,yp + 21);
@@ -55,7 +55,7 @@ window.interface = new function(){
             ctx.fillRect(xp + 45,yp + 5,78 * (u.hp / maxHp),22);
             ctx.textAlign = "center";
             ctx.fillStyle = "white";
-            //ctx.font = "20px Arial";
+            ctx.font = '14px Consolas';
             ctx.strokeStyle = "black";
             ctx.strokeText(u.hp + " / " + maxHp,xp + 84,yp + 21);
             ctx.fillText(u.hp + " / " + maxHp,xp + 84,yp + 21);
@@ -99,13 +99,23 @@ window.interface = new function(){
         if(mapEnabled){ //map drawing
             var x = CW - 300;
             var y = CH - 300;
+            var tx = scrollX / tileSize;
+            var ty = scrollY / tileSize;
+            if(!mapDragging){
+                if(mapScrollX + 50 < tx + (CW / tileSize) / 2)mapScrollX++;
+                if(mapScrollY + 50 < ty + (CH / tileSize) / 2)mapScrollY++;
+                if(mapScrollX + 50 > tx + (CW / tileSize) / 2)mapScrollX--;
+                if(mapScrollY + 50 > ty + (CH / tileSize) / 2)mapScrollY--;
+            }
             ctx.fillStyle = "rgba(0,0,0,0.8)";
             ctx.strokeStyle = "rgba(255,255,255,0.8)";
             ctx.strokeRect(x, y, 300, 300);
             ctx.fillRect(x, y, 300, 300);
             ctx.fillStyle = "rgba(255,255,255,0.1)";
-            ctx.strokeRect(x + 3 * (scrollX / tileSize), y + 3 * (scrollY / tileSize), 3 * CW / tileSize, 3 * CH / tileSize);
-            ctx.fillRect(x + 3 * (scrollX / tileSize), y + 3 * (scrollY / tileSize), 3 * CW / tileSize, 3 * CH / tileSize);
+            x -= mapScrollX * 3;
+            y -= mapScrollY * 3;
+            ctx.strokeRect(x + 3 * tx, y + 3 * ty, 3 * CW / tileSize, 3 * CH / tileSize);
+            ctx.fillRect(x + 3 * tx, y + 3 * ty, 3 * CW / tileSize, 3 * CH / tileSize);
             for(var i in droids){
                 var u = droids[i];
                 if(u !== null){
@@ -360,7 +370,7 @@ window.interface = new function(){
     navs[0].onclick = () => {action = 0};
     navs[1].onclick = () => {if(countActors() >= 5)action = 1; else bigs.push({t: 90, m: 'You need at least 5 selected droids'})};
     navs[2].onclick = () => {if(countActors() >= 5)action = 2; else bigs.push({t: 90, m: 'You need at least 5 selected droids'})};
-    navs[3].onclick = () => {if(findActorDroid() !== undefined)action = 3; else bigs.push({t: 90, m: 'You need at least 1 basic droid'})};
+    navs[3].onclick = () => {if(findActorDroids(selected, 1)[0] !== undefined)action = 3; else bigs.push({t: 90, m: 'You need at least 1 basic droid'})};
 
     function lookNavs(bool){
         for(var i = 0; i < 4; i++){

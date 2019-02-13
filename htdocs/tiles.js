@@ -14,10 +14,10 @@ window.tiles = new function(){
         "rgb(32,224,96)",
     ];
 
-    const droidTypes = 8;
+    const droidTypes = 9;
     loading = 0;
     function incl(){
-        if(++loading === 20){
+        if(++loading === 24){
             init();
             preinit();
         }
@@ -29,9 +29,9 @@ window.tiles = new function(){
         pat1 = ctx.createPattern(imgArray[0], 'repeat'); // background pattern 3x faster i hope
         for(var i = 0;i < dImages.length;i++){//convert images to imageData objects
             var img = dImages[i];
-            ctx.clearRect(0,0,32,32);
+            ctx.clearRect(0,0,img.naturalWidth,img.naturalHeight);
             ctx.drawImage(img,0,0);
-            dImagesData.push(ctx.getImageData(0,0,32,32));
+            dImagesData.push(ctx.getImageData(0,0,img.naturalWidth,img.naturalHeight));
         }
     }
 
@@ -134,6 +134,12 @@ window.tiles = new function(){
             ctx.lineTo(x + 16, y - 4);
             ctx.arc(x + 16, y + 16, 20, -Math.PI / 2, (1 - (u.tol / spec[u.metaMorph].transformTime)) * Math.PI * 2 - Math.PI / 2, false);
             ctx.fill();
+        }else if(u.type === 2){
+            ctx.save();
+            ctx.translate(x + 16, y + 16);
+            ctx.rotate(u.angle);
+            ctx.drawImage(teams[u.team].img[8], -24, -24);
+            ctx.restore();
         }
     }
     this.dDroid = dDroid;
@@ -177,7 +183,7 @@ window.tiles = new function(){
 
     function prerenderTile(imgId, r, g, b){
         var img = dImagesData[imgId];
-        var imgData = ctx.createImageData(32,32);
+        var imgData = ctx.createImageData(img.width,img.height);
         var dat = img.data;
         for(var i = 0;i < imgData.data.length;i += 4){
             var base = (dat[i + 1] + dat[i + 2]) / 2;
@@ -187,7 +193,7 @@ window.tiles = new function(){
             imgData.data[i + 2] = base + Math.round((m / 255) * b);
             imgData.data[i + 3] = Math.round(img.data[i + 3]);
         }
-        ctx2.clearRect(0,0,32,32);
+        ctx2.clearRect(0,0,100,100);
         ctx2.putImageData(imgData,0,0);
         var img2 = new Image();
         img2.src = cv2.toDataURL("image/png");

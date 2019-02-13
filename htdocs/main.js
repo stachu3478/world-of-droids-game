@@ -9,8 +9,8 @@ var CW = can.width;
 var CH = can.height;
 
 var cv2 = document.createElement("canvas"); //secondary canvas element for converting imageData to Image
-cv2.width = 32;
-cv2.height = 32;
+cv2.width = 100;
+cv2.height = 100;
 var ctx2 = cv2.getContext("2d");
 
 var sfx = [
@@ -75,15 +75,39 @@ function countActors(){
 	return n;
 }
 
-function findActorDroid(){
+function findActorDroids(selected, quantity){
+	var n = 0;
+	var ds = [];
 	for(var i in selected){
 		var d = droids[selected[i]];
-		if(d.type === 0)return d.id;
+		if(d.type === 0){
+			ds.push(d.id);
+			if(++n >= quantity)return ds;
+		}
 	}
+	return ds;
+}
+
+function findNearestDroid(selected, x, y){
+	var min = Infinity;
+	var idx;
+	for(var i in selected){
+		var u = droids[selected[i]];
+		if(u){
+			var distance = dist(u.x - x, u.y - y);
+			if(distance < min){
+				min = distance;
+				idx = selected[i];
+			}
+			if(selected.indexOf(u.id) === -1)selected.push(u.id);
+		}
+	}
+	return idx;
 }
 
 document.body.onkeydown = function(evt){
 	pressed[evt.key] = true;
+	if(!menu.hidden || chatting)return;
 	switch(evt.key){
 	case " ": case "Spacebar":{
 		if(marking){
@@ -114,6 +138,7 @@ document.body.onkeydown = function(evt){
 };
 document.body.onkeyup = function(evt){
 	pressed[evt.key] = false;
+	if(!menu.hidden || chatting)return;
 	switch(evt.key){
 		case "Spacebar":{
 			pressed[' '] = false;
@@ -222,6 +247,8 @@ function attack(d1,d2){
 
 var scrollX = tileSize * 50 - CW / 2;
 var scrollY = tileSize * 50 - CH / 2;
+var mapScrollX = 0;
+var mapScrollY = 0;
 
 function valiScroll(){
 	if(scrollX < 0)
@@ -306,7 +333,7 @@ function preinit(){
 			var y = 45 + Math.round(Math.random() * 10);
 			var done = false;
 			var block = map.getBlock(x, y, true);
-			if((block.i == 0) && (block.u == null)){
+			if((block.i === 0) && (block.u == null)){
 				done = true;
 				droids.push(new Droid(x,y,0));
 			}
@@ -317,10 +344,7 @@ function preinit(){
 	render(map,scrollX,scrollY, true);//draw that background
 }
 function red(str){//just span with red color
-	var el = document.createElement("span");
-	el.style.color = "red";
-	el.innerText = str;
-	return el;
+	return "<span style='color: red'>" + str +  "</span>";
 }
 
 var cmdPrefix = "/";
@@ -342,7 +366,7 @@ var chat = {
 	],
 	send: function(msg){
 		
-		if(msg == '')return false;
+		if(msg === '')return false;
 		var hl = this.history.length - 1;
 		if(this.history[hl] !== msg)this.history.push(msg);
 		this.historyPos = hl;
@@ -427,6 +451,7 @@ socket.on("map",function(evt){
 		socket.on("d",function(evt){
 			var dl = evt.d;
 			var offsets = [];
+			var angles = [];
 			for(var i = 0;i < dl.length;i++){
 				entities.push(new Entity(dl[i].x * 32, dl[i].y * 32, 1, 7));
 				map.setBlockU(dl[i].x, dl[i].y, null);
@@ -435,7 +460,7 @@ socket.on("map",function(evt){
 			for(var i in droids){
 				var d = droids[i];
 				map.setBlockU(d.x, d.y, null);
-				//offsets[d.id] = d.maxOffset;
+				angles[i] = d.angle;
 				delete droids[1];
 			}
 			droids = [];
@@ -443,6 +468,7 @@ socket.on("map",function(evt){
 				var d = evt.r[i];
 				map.setBlockU(d.x, d.y, d);
 				d.dir = dirsbytype[(d.x - d.lastX) + "," + (d.y - d.lastY)] || 2;
+				d.angle = angles[d.id];
 				if(!d.moving)d.maxOffset = offsets[d.id];
 				droids[d.id] = d;
 			}
@@ -479,9 +505,10 @@ socket.on("map",function(evt){
 		});
 
 		socket.on('attacks', function(attacks){
-			for(var i = 0; i < attacks.length; i++){
+			for(var i = 0; i < attacks.length; i += 2){
 				var d1 = droids[attacks[i]], d2 = droids[attacks[i + 1]];
 				if(d1 && d2){
+					if(d1.type === 2)d1.angle = Math.atan2(d2.y - d1.y, d2.x - d1.x);
 					entities.push(new Entity(d1.x * 32, d1.y * 32, 0, 10, d2.x * 32, d2.y * 32));
 					sfx[0].play();
 				}
@@ -496,6 +523,11 @@ socket.on("map",function(evt){
 				sfx[2].play();
 			}
 		});
+		socket.on('blocks', function(evt){
+			evt.forEach(function(b){
+				map.setBlock(b.x, b.y, b.id);
+			})
+		});
 	}
 	init();
 	menu.hidden = true;
@@ -509,7 +541,7 @@ function scrol(x,y){
 	mx += scrollX - v1;
 	my += scrollY - v2;
 }
-var mapSizePx = 100 * tileSize;
+var mapSizePx = 128 * tileSize;
 var loopFunc = function(){
 	
 	var then = Date.now();
@@ -539,8 +571,8 @@ function init(){
 	can.onmousedown = function(evt){
 		if(interface.processButtons(evt.offsetX, evt.offsetY, true))return;
 		if((evt.offsetX > CW - 300) && (evt.offsetY > CH - 300)){ // clicks on map
-			scrollX = Math.round((evt.offsetX - CW + 300) * tileSize / 3 - CW / 2);
-			scrollY = Math.round((evt.offsetY - CH + 300) * tileSize / 3 - CH / 2);
+			scrollX = Math.round((evt.offsetX - CW + 300 + mapScrollX * 3) * tileSize / 3 - CW / 2);
+			scrollY = Math.round((evt.offsetY - CH + 300 + mapScrollY * 3) * tileSize / 3 - CH / 2);
 			valiScroll();
 			mapDragging = true;
 		}else if((evt.offsetX > 40) || (evt.offsetY > 352 )){//out of interface
@@ -598,9 +630,10 @@ function init(){
 							var w2 = 0.5;
 							var dArrx = [0, 1, 0, -1];
 							var dArry = [-1, 0, 1, 0];
+							var mine = map.getBlock(tmx, tmy).i === 0;
 							for (var i = 0; i < selected.length; i++) {
 								var d = droids[selected[i]];
-								if(!spec[d.type].canMove)continue
+								if(!spec[d.type].canMove)continue;
 								if (d && (d.team === myTeam)) {
 									if (!d.moving) {
 										moving.push(d);
@@ -620,7 +653,7 @@ function init(){
 											w2 += 0.5;
 											dir = (dir + 1) % 4;
 										}
-										block = map.getBlock(tmx, tmy);
+										block = mine ? map.getBlock(tmx, tmy) : {i: 0};
 									} while (!block || (block.i === 1) || (block.u));
 									arr.push({i: d.id, x: d.targetX, y: d.targetY});
 								}
@@ -634,12 +667,18 @@ function init(){
 					}break;
 					default:{
 						if(canForm(tex, tey, action)){
+							var nearest = selected.slice(0).sort(function(a, b){
+								var d1 = droids[a];
+								var d2 = droids[b];
+								return dist(d1.x - tex, d1.y - tey) - dist(tex - d2.x, tey - d2.y)
+							});
+							var drs = findActorDroids(nearest, 5);
 							var data = {
 								x: tex,
 								y: tey,
-								d: findActorDroid(),
+								d: drs[0],
 								type: action,
-								preferredDroids: selected.slice(1),
+								preferredDroids: drs.slice(1),
 							};
 							socket.emit('transform', data);
 							console.log(data);
@@ -697,8 +736,8 @@ function init(){
 		}
 		
 		if(mapDragging){
-			scrollX = Math.round((evt.offsetX - CW + 300) * tileSize / 3 - CW / 2);
-			scrollY = Math.round((evt.offsetY - CH + 300) * tileSize / 3 - CH / 2);
+			scrollX = Math.round((evt.offsetX - CW + 300 + mapScrollX * 3) * tileSize / 3 - CW / 2);
+			scrollY = Math.round((evt.offsetY - CH + 300 + mapScrollY * 3) * tileSize / 3 - CH / 2);
 		}
 
 		interface.processButtons(evt.offsetX, evt.offsetY, false);

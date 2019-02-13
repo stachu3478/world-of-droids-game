@@ -12,8 +12,9 @@ module.exports = class Misc {
             var y2 = prefy2;
             if(isNaN(minDist))return false;
             if(!(x1 && y1 && x2 && y2))throw new Error('First 4 arguments should be a number. Got ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2);
-            console.log('critical path: ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2 + ' ' + + minDist);
-            if (chunks.getBlock(x2, y2).i === 0 && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2) return [x2, y2];
+            //console.log('critical path: ' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2 + ' ' + + minDist);
+            //if(chunks.getBlock(x2, y2).u)return false;
+            if (!chunks.getBlock(x2, y2).u && (Math.abs(x1 - x2) < 2) && Math.abs(y1 - y2) < 2 && Math.abs(x1 - x2 + y1 - y2) < 2) return [x2, y2];
             var pm = new Array(128);
             for (var i = 0; i < 128; i++) {
                 pm[i] = new Int8Array(128);
@@ -257,6 +258,7 @@ module.exports = class Misc {
                 canShot: true,
                 canTarget: true,
                 canMakeDroids: false,
+                canMine: true,
                 hp: 50,
                 transformTime: 0,
                 score: 1,
@@ -268,6 +270,7 @@ module.exports = class Misc {
                 canShot: false,
                 canTarget: false,
                 canMakeDroids: true,
+                canMine: false,
                 hp: 200,
                 transformTime: 8,
                 score: 10,
@@ -279,6 +282,7 @@ module.exports = class Misc {
                 canShot: true,
                 canTarget: true,
                 canMakeDroids: false,
+                canMine: false,
                 hp: 250,
                 transformTime: 12,
                 score: 20,
@@ -290,6 +294,7 @@ module.exports = class Misc {
                 canShot: false,
                 canTarget: false,
                 canMakeDroids: false,
+                canMine: false,
                 hp: 200,
                 transformTime: 16,
                 score: 1,
@@ -301,6 +306,7 @@ module.exports = class Misc {
                 canShot: false,
                 canTarget: false,
                 canMakeDroids: false,
+                canMine: false,
                 hp: 200,
                 score: 1,
                 obtainScore: 0,

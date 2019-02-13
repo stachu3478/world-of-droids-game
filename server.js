@@ -64,6 +64,8 @@ function resetPath(id){
 	console.log(d.free);
 }
 
+var stones = {};
+
 var inter = setInterval(function(){
 	var then = Date.now();
 	var ref = false;
@@ -73,19 +75,34 @@ var inter = setInterval(function(){
 			var p = d.path;
 			var block;
 			var target = droids[d.target];
-			if(p && p.length > 0)block = chunks.getBlock(p[0], p[1]);
+			if(p && p.length > 0)
+				block = chunks.getBlock(p[0], p[1]);
+			else
+				block = chunks.getBlock(d.targetX, d.targetY);
 			d.maxOffset = 0;
 			if(misc.dist(d.x - d.targetX,d.y - d.targetY) <= d.targetTolerance || !misc.spec[d.type].canMove){
 				if(target){
 					if (misc.dist(d.x - target.x,d.y - target.y) > 5) {
-						eachDroid((i, d3) => {
+						if(!misc.spec[d.type].canMove)eachDroid((i, d3) => {
 							if (d3.team === target.team && misc.dist(d.x - d3.x, d.y - d3.y) <= 5) {
 								sendDroid(d, d3.x, d3.y, undefined, d3.id);
 								return true;
 							}
-						})
+						});
+						else sendDroid(d, target.x, target.y);
 					}else{
 						attack(d, target);
+					}
+				}else if(block.i === 1){ // stone dash ;d
+					if (misc.spec[d.type].canMine && misc.dist(d.x - d.targetX,d.y - d.targetY) <= 5){
+						var key = d.targetX + "," + d.targetY;
+						if(!stones[key])stones[key] = Math.round(Math.random() * 500) + 500;
+						if(--stones[key] <= 0){
+							chunks.setBlock(d.targetX, d.targetY, 0);
+							teams[d.team].ore += Math.round(Math.random() * 50) + 50
+							io.emit('blocks',[{x: d.targetX, y: d.targetY, id: 0}]);
+						}
+						//console.log('Mining');
 					}
 				}else{
 					moving[i] = undefined;
@@ -93,7 +110,6 @@ var inter = setInterval(function(){
 					d.moving = false;
 					d.dmg = false;
 					d.free = true;
-					console.log('arrived');
 				}
 			}else{
 				if(p && p.length > 0 && block && !block.u && (block.i === 0) && (d.tol > 2)){
@@ -204,6 +220,10 @@ var inter = setInterval(function(){
 			factorious = factorious.filter((f) => f);
 			continue;
 		}
+		if(!misc.spec[d.type].canMakeDroids){
+			delete factorious[i];
+			continue
+		}
 		if(d.tol <= 0){
 			var factorized = false
 			for(var i in misc.maze){
@@ -281,6 +301,7 @@ function Team(id,u,p,r,g,b){
 	this.score = 0;
 	this.highScore = 0;
 	this.targetTolerance = 0;
+	this.ore = 0;
 }
 
 function getTeamByUsername(name){
@@ -672,6 +693,7 @@ function newLoad(){
 				teams[i].anihilated = true;
 				if(!teams[i].score)teams[i].score = 0;
 				if(!teams[i].highScore)teams[i].highScore = 0;
+				if(!teams[i].ore)teams[i].ore = 0;
 			}
 			eachDroid((i, d) => {
 				if(d.id < 2)return false;
@@ -695,10 +717,10 @@ function newLoad(){
 					}break;
 				}
 				d.free = true;
-				if(d.lastX === 0 && d.lastY === 0){
+				/*if(d.lastX === 0 && d.lastY === 0){
 					delDroid(d);
 					console.log('fake droid');
-				}
+				}*/
 				if(d.target === undefined)d.target = false;
 				if(d.toTrans === undefined)d.toTrans = false;
 			});
@@ -850,8 +872,9 @@ function init(){
 									if(d && (d.team === this._id)){//valid team?
 										if(misc.spec[d.type || 0].canMove) {
 											d.free = false;
-											sendDroid(d,msg.d[i].x,msg.d[i].y, null, msg.i);
 											d.toTrans = false;
+											if(!msg.i)d.target = false;
+											sendDroid(d,msg.d[i].x,msg.d[i].y, null, msg.i);
 										}
 									}else if(d){
 										console.log("Invalid team: found: ",d.team,", expected ",this._id);

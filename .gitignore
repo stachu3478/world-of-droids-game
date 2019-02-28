@@ -73,3 +73,6 @@ data/
 
 # .svg drawing for dev
 .svg
+
+#safe server data
+databasePassword.txt

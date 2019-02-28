@@ -76,3 +76,6 @@ data/
 
 #safe server data (lock if you push to server)
 #databasePassword.txt
+
+# webstorm workspace data
+.idea

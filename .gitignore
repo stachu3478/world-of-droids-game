@@ -74,5 +74,5 @@ data/
 # .svg drawing for dev
 .svg
 
-#safe server data
-databasePassword.txt
+#safe server data (lock if you push to server)
+#databasePassword.txt

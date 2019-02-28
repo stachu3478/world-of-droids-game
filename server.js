@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 var chunks = require('./chunks.js').terrain;
 var miscClass = require('./misc.js');
 var misc = new miscClass(chunks);
+var databasePassword = fs.readFileSync('databasePassword.txt').toString();
 
 app.use(express.static('htdocs'));
 
@@ -61,7 +62,7 @@ function resetPath(id){
 		d.targetY += Math.round(Math.random() * 2 - 1);
 	}
 	d.tol = Math.round(Math.random() * -2);
-	console.log(d.free);
+	//console.log(d.free);
 }
 
 var stones = {};
@@ -387,7 +388,7 @@ function fixDroids(){
 	var n = 0;
 	eachDroid((i, d) => {
 		if(!chunks.getBlock(d.x, d.y).u){
-			console.log('ERROR');
+			//console.log('ERROR');
 			chunks.setBlockU(d.x, d.y, d);
 		}
 		if(i !== d.id){
@@ -420,7 +421,7 @@ function transform(d, type){
 		setType(d, 4); // type of droid that is under construction;
 		d.metaMorph = type;
 		d.hp = Math.floor(misc.spec[type].hp / 10);
-		console.log('trans done');
+		//console.log('trans done');
 		return true;
 	}
 }
@@ -490,8 +491,8 @@ function delDroid(d){
 				d2.free = true;
 			}
 		});
-		var time = Date.now() - now;
-		console.log('Finding took ' + time + 'ms');
+		//var time = Date.now() - now;
+		//console.log('Finding took ' + time + 'ms');
 		chunks.setBlockU(d.x, d.y);
 		if(anihilated){
 			var team = teams[t];
@@ -635,7 +636,7 @@ function newSave(){
 	  timeout: 10000,
 	  form: {
 		data: JSON.stringify(data),
-		password: "01h0fiq0e8r9urjnvlmzmvpwoqr910",
+		password: databasePassword,
 	  },
 	}, function(error, response, body) {
 		if(error){
@@ -875,6 +876,7 @@ function init(){
 											d.toTrans = false;
 											if(!msg.i)d.target = false;
 											sendDroid(d,msg.d[i].x,msg.d[i].y, null, msg.i);
+											d.targetTolerance = 0;
 										}
 									}else if(d){
 										console.log("Invalid team: found: ",d.team,", expected ",this._id);
